@@ -180,6 +180,7 @@ public class EditSession implements Extent, AutoCloseable {
     @Deprecated
     public enum ReorderMode {
         MULTI_STAGE("multi"),
+        MULTI_STAGE_UNBUFFERED("hotfix"),
         FAST("fast"),
         NONE("none");
 
@@ -393,12 +394,21 @@ public class EditSession implements Extent, AutoCloseable {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
                 }
                 reorderExtent.setEnabled(true);
+                batchingExtent.setEnabled(true);
+                break;
+            case MULTI_STAGE_UNBUFFERED:
+                if (sideEffectExtent != null) {
+                    sideEffectExtent.setPostEditSimulationEnabled(false);
+                }
+                reorderExtent.setEnabled(true);
+                batchingExtent.setEnabled(false);
                 break;
             case FAST:
                 sideEffectExtent.setPostEditSimulationEnabled(true);
                 if (reorderExtent != null) {
                     reorderExtent.setEnabled(false);
                 }
+                batchingExtent.setEnabled(true);
                 break;
             case NONE:
                 if (sideEffectExtent != null) {
@@ -407,6 +417,7 @@ public class EditSession implements Extent, AutoCloseable {
                 if (reorderExtent != null) {
                     reorderExtent.setEnabled(false);
                 }
+                batchingExtent.setEnabled(true);
                 break;
             default:
                 break;
