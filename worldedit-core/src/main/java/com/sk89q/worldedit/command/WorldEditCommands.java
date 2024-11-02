@@ -78,6 +78,7 @@ public class WorldEditCommands {
     public void version(Actor actor) {
         actor.printInfo(TranslatableComponent.of("worldedit.version.version", TextComponent.of(WorldEdit.getVersion())));
         actor.printInfo(TextComponent.of("https://github.com/EngineHub/WorldEdit/"));
+        actor.printInfo(TextComponent.of("https://github.com/LordChrom/WorldEdit"));
 
         PlatformManager pm = we.getPlatformManager();
 

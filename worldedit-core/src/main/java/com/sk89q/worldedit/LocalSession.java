@@ -112,7 +112,7 @@ public class LocalSession {
     private transient ZoneId timezone = ZoneId.systemDefault();
     private transient BlockVector3 cuiTemporaryBlock;
     @SuppressWarnings("deprecation")
-    private transient EditSession.ReorderMode reorderMode = EditSession.ReorderMode.FAST;
+    private transient EditSession.ReorderMode reorderMode = EditSession.ReorderMode.MULTI_STAGE;
     private transient List<Countable<BlockState>> lastDistribution;
     private transient World worldOverride;
     private transient boolean tickingWatchdog = true;
