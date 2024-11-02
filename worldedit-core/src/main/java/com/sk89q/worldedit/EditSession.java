@@ -180,7 +180,6 @@ public class EditSession implements Extent, AutoCloseable {
     @Deprecated
     public enum ReorderMode {
         MULTI_STAGE("multi"),
-        MULTI_STAGE_UNBUFFERED("hotfix"),
         FAST("fast"),
         NONE("none");
 
@@ -219,7 +218,7 @@ public class EditSession implements Extent, AutoCloseable {
     private final @Nullable List<TracingExtent> tracingExtents;
 
     @Deprecated
-    private ReorderMode reorderMode = ReorderMode.FAST;
+    private ReorderMode reorderMode = ReorderMode.MULTI_STAGE;
 
     private Mask oldMask;
 
@@ -390,13 +389,6 @@ public class EditSession implements Extent, AutoCloseable {
         this.reorderMode = reorderMode;
         switch (reorderMode) {
             case MULTI_STAGE:
-                if (sideEffectExtent != null) {
-                    sideEffectExtent.setPostEditSimulationEnabled(false);
-                }
-                reorderExtent.setEnabled(true);
-                batchingExtent.setEnabled(true);
-                break;
-            case MULTI_STAGE_UNBUFFERED:
                 if (sideEffectExtent != null) {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
                 }
@@ -667,7 +659,7 @@ public class EditSession implements Extent, AutoCloseable {
         if (chunkBatchingExtent != null) {
             chunkBatchingExtent.setEnabled(false);
             assert batchingExtent != null : "same nullness as chunkBatchingExtent";
-            batchingExtent.setEnabled(true);
+//            batchingExtent.setEnabled(true);
         }
     }
 

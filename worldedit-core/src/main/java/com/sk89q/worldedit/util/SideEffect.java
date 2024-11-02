@@ -23,8 +23,8 @@ import java.util.Locale;
 
 public enum SideEffect {
     LIGHTING(State.ON, true),
-    NEIGHBORS(State.ON, true),
-    UPDATE(State.ON, true),
+    NEIGHBORS(State.OFF, true),
+    UPDATE(State.OFF, true),
     VALIDATION(State.OFF, true),
     ENTITY_AI(State.OFF, true),
     EVENTS(State.OFF, true),
