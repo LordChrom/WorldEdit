@@ -56,6 +56,9 @@ import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.api.Version;
+import net.fabricmc.loader.api.metadata.ModMetadata;
+import net.fabricmc.loader.api.metadata.version.VersionPredicate;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -71,12 +74,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.phys.BlockHitResult;
@@ -128,7 +128,7 @@ public class FabricWorldEdit implements ModInitializer {
      * @param key the registry key
      */
     public static <T> Registry<T> getRegistry(ResourceKey<Registry<T>> key) {
-        return LIFECYCLED_SERVER.valueOrThrow().registryAccess().registryOrThrow(key);
+        return LIFECYCLED_SERVER.valueOrThrow().registryAccess().lookupOrThrow(key);
     }
 
     private FabricPermissionsProvider provider;
@@ -179,7 +179,7 @@ public class FabricWorldEdit implements ModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register(this::onPlayerDisconnect);
         AttackBlockCallback.EVENT.register(this::onLeftClickBlock);
         UseBlockCallback.EVENT.register(this::onRightClickBlock);
-        UseItemCallback.EVENT.register(this::onRightClickAir);
+        UseItemCallback.EVENT.register(this::onRightClickItem);
         LOGGER.info("WorldEdit for Fabric (version " + getInternalVersion() + ") is loaded");
     }
 
@@ -208,16 +208,28 @@ public class FabricWorldEdit implements ModInitializer {
     private FabricPermissionsProvider getInitialPermissionsProvider() {
         try {
             Class.forName("me.lucko.fabric.api.permissions.v0.Permissions", false, getClass().getClassLoader());
+            Optional<Version> version = FabricLoader.getInstance().getModContainer("fabric-permissions-api-v0")
+                    .map(ModContainer::getMetadata)
+                    .map(ModMetadata::getVersion);
+
+            if (version.isPresent() && !VersionPredicate.parse(">=0.3.3").test(version.get())) {
+                throw new RuntimeException("Fabric permissions version " + version.get() + " is not supported. Please update Fabric Permissions API");
+            }
+
             return new FabricPermissionsProvider.LuckoFabricPermissionsProvider(platform);
         } catch (ClassNotFoundException ignored) {
             // fallback to vanilla
+        } catch (Exception e) {
+            // catch any exception to prevent crashing the server, but still print a warning
+            LOGGER.warn("Failed to load Fabric permissions provider. Falling back to Minecraft", e);
         }
+
         return new FabricPermissionsProvider.VanillaPermissionsProvider(platform);
     }
 
     private void setupRegistries(MinecraftServer server) {
         // Blocks
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.BLOCK).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.BLOCK).keySet()) {
             String key = name.toString();
             if (BlockType.REGISTRY.get(key) == null) {
                 BlockType.REGISTRY.register(key, new BlockType(key,
@@ -225,46 +237,46 @@ public class FabricWorldEdit implements ModInitializer {
             }
         }
         // Items
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.ITEM).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.ITEM).keySet()) {
             String key = name.toString();
             if (ItemType.REGISTRY.get(key) == null) {
                 ItemType.REGISTRY.register(key, new ItemType(key));
             }
         }
         // Entities
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.ENTITY_TYPE).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.ENTITY_TYPE).keySet()) {
             String key = name.toString();
             if (EntityType.REGISTRY.get(key) == null) {
                 EntityType.REGISTRY.register(key, new EntityType(key));
             }
         }
         // Biomes
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.BIOME).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.BIOME).keySet()) {
             String key = name.toString();
             if (BiomeType.REGISTRY.get(key) == null) {
                 BiomeType.REGISTRY.register(key, new BiomeType(key));
             }
         }
         // Tags
-        server.registryAccess().registryOrThrow(Registries.BLOCK).getTagNames().map(TagKey::location).forEach(name -> {
+        server.registryAccess().lookupOrThrow(Registries.BLOCK).getTags().map(t -> t.key().location()).forEach(name -> {
             String key = name.toString();
             if (BlockCategory.REGISTRY.get(key) == null) {
                 BlockCategory.REGISTRY.register(key, new BlockCategory(key));
             }
         });
-        server.registryAccess().registryOrThrow(Registries.ITEM).getTagNames().map(TagKey::location).forEach(name -> {
+        server.registryAccess().lookupOrThrow(Registries.ITEM).getTags().map(t -> t.key().location()).forEach(name -> {
             String key = name.toString();
             if (ItemCategory.REGISTRY.get(key) == null) {
                 ItemCategory.REGISTRY.register(key, new ItemCategory(key));
             }
         });
-        Registry<Biome> biomeRegistry = server.registryAccess().registryOrThrow(Registries.BIOME);
-        biomeRegistry.getTagNames().forEach(tagKey -> {
-            String key = tagKey.location().toString();
+        Registry<Biome> biomeRegistry = server.registryAccess().lookupOrThrow(Registries.BIOME);
+        biomeRegistry.getTags().forEach(tag -> {
+            String key = tag.key().location().toString();
             if (BiomeCategory.REGISTRY.get(key) == null) {
                 BiomeCategory.REGISTRY.register(key, new BiomeCategory(
                     key,
-                    () -> biomeRegistry.getTag(tagKey)
+                    () -> biomeRegistry.get(tag.key())
                         .stream()
                         .flatMap(HolderSet.Named::stream)
                         .map(Holder::value)
@@ -274,14 +286,14 @@ public class FabricWorldEdit implements ModInitializer {
             }
         });
         // Features
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).keySet()) {
             String key = name.toString();
             if (ConfiguredFeatureType.REGISTRY.get(key) == null) {
                 ConfiguredFeatureType.REGISTRY.register(key, new ConfiguredFeatureType(key));
             }
         }
         // Structures
-        for (ResourceLocation name : server.registryAccess().registryOrThrow(Registries.STRUCTURE).keySet()) {
+        for (ResourceLocation name : server.registryAccess().lookupOrThrow(Registries.STRUCTURE).keySet()) {
             String key = name.toString();
             if (StructureType.REGISTRY.get(key) == null) {
                 StructureType.REGISTRY.register(key, new StructureType(key));
@@ -376,10 +388,9 @@ public class FabricWorldEdit implements ModInitializer {
         debouncer.setLastInteraction(player, result);
     }
 
-    private InteractionResultHolder<ItemStack> onRightClickAir(Player playerEntity, Level world, InteractionHand hand) {
-        ItemStack stackInHand = playerEntity.getItemInHand(hand);
+    private InteractionResult onRightClickItem(Player playerEntity, Level world, InteractionHand hand) {
         if (skipInteractionEvent(playerEntity, hand)) {
-            return InteractionResultHolder.pass(stackInHand);
+            return InteractionResult.PASS;
         }
 
         WorldEdit we = WorldEdit.getInstance();
@@ -387,13 +398,13 @@ public class FabricWorldEdit implements ModInitializer {
 
         Optional<Boolean> previousResult = debouncer.getDuplicateInteractionResult(player);
         if (previousResult.isPresent()) {
-            return previousResult.get() ? InteractionResultHolder.success(stackInHand) : InteractionResultHolder.pass(stackInHand);
+            return previousResult.get() ? InteractionResult.SUCCESS : InteractionResult.PASS;
         }
 
         boolean result = we.handleRightClick(player);
         debouncer.setLastInteraction(player, result);
 
-        return result ? InteractionResultHolder.success(stackInHand) : InteractionResultHolder.pass(stackInHand);
+        return result ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
     private void onPlayerDisconnect(ServerGamePacketListenerImpl handler, MinecraftServer server) {

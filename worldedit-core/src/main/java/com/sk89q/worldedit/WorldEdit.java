@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.sk89q.worldedit.blocks.BaseItem;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.event.platform.BlockInteractEvent;
@@ -55,10 +54,10 @@ import com.sk89q.worldedit.session.SessionManager;
 import com.sk89q.worldedit.util.Direction;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.asset.AssetLoaders;
-import com.sk89q.worldedit.util.concurrency.EvenMoreExecutors;
 import com.sk89q.worldedit.util.eventbus.EventBus;
 import com.sk89q.worldedit.util.formatting.text.TextComponent;
 import com.sk89q.worldedit.util.formatting.text.TranslatableComponent;
+import com.sk89q.worldedit.util.formatting.text.event.ClickEvent;
 import com.sk89q.worldedit.util.formatting.text.format.TextColor;
 import com.sk89q.worldedit.util.io.file.FileSelectionAbortedException;
 import com.sk89q.worldedit.util.io.file.FilenameException;
@@ -123,8 +122,6 @@ public final class WorldEdit {
     @Deprecated
     private final EditSessionFactory editSessionFactory = new EditSessionFactory.EditSessionFactoryImpl();
     private final SessionManager sessions = new SessionManager(this);
-    private final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
-            EvenMoreExecutors.newBoundedCachedThreadPool(0, 1, 20, "WorldEdit Task Executor - %s"));
     private final Supervisor supervisor = new SimpleSupervisor();
     private final AssetLoaders assetLoaders = new AssetLoaders(this);
 
@@ -191,7 +188,7 @@ public final class WorldEdit {
      * @return the executor service
      */
     public ListeningExecutorService getExecutorService() {
-        return executorService;
+        return platformManager.getExecutorService();
     }
 
     /**
@@ -751,7 +748,12 @@ public final class WorldEdit {
         try {
             engine = new RhinoCraftScriptEngine();
         } catch (NoClassDefFoundError ignored) {
-            player.printError(TranslatableComponent.of("worldedit.script.no-script-engine"));
+            player.printError(TranslatableComponent.of("worldedit.script.missing-script-engine")
+                .append(TextComponent.newline())
+                .append(TranslatableComponent.of("worldedit.script.please-see",
+                    TextComponent.of("https://worldedit.enginehub.org/en/latest/usage/other/craftscripts/", TextColor.AQUA).clickEvent(ClickEvent.openUrl("https://worldedit.enginehub.org/en/latest/usage/other/craftscripts/")))
+                )
+            );
             return;
         }
 

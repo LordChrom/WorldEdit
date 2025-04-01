@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.Futures;
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseItem;
 import com.sk89q.worldedit.blocks.BaseItemStack;
@@ -66,6 +67,7 @@ import com.sk89q.worldedit.world.weather.WeatherTypes;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.EndFeatures;
@@ -79,13 +81,13 @@ import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -138,7 +140,7 @@ public class NeoForgeWorld extends AbstractWorld {
     private static ResourceLocation getDimensionRegistryKey(ServerLevel world) {
         return Objects.requireNonNull(world.getServer(), "server cannot be null")
             .registryAccess()
-            .registryOrThrow(Registries.DIMENSION_TYPE)
+            .lookupOrThrow(Registries.DIMENSION_TYPE)
             .getKey(world.dimensionType());
     }
 
@@ -240,22 +242,21 @@ public class NeoForgeWorld extends AbstractWorld {
         var biomes = (PalettedContainer<Holder<Biome>>) chunk.getSection(chunk.getSectionIndex(position.y())).getBiomes();
         biomes.getAndSetUnchecked(
             position.x() & 3, position.y() & 3, position.z() & 3,
-            getWorld().registryAccess().registry(Registries.BIOME)
-                .orElseThrow()
-                .getHolderOrThrow(ResourceKey.create(Registries.BIOME, ResourceLocation.parse(biome.id())))
+            getWorld().registryAccess().lookupOrThrow(Registries.BIOME)
+                .getOrThrow(ResourceKey.create(Registries.BIOME, ResourceLocation.parse(biome.id())))
         );
-        chunk.setUnsaved(true);
+        chunk.markUnsaved();
         return true;
     }
 
-    private static final LoadingCache<ServerLevel, WorldEditFakePlayer> fakePlayers
-            = CacheBuilder.newBuilder().weakKeys().softValues().build(CacheLoader.from(WorldEditFakePlayer::new));
+    private static final LoadingCache<ServerLevel, NeoForgeFakePlayer> fakePlayers
+            = CacheBuilder.newBuilder().weakKeys().softValues().build(CacheLoader.from(NeoForgeFakePlayer::new));
 
     @Override
     public boolean useItem(BlockVector3 position, BaseItem item, Direction face) {
         ItemStack stack = NeoForgeAdapter.adapt(new BaseItemStack(item.getType(), item.getNbtReference(), 1));
         ServerLevel world = getWorld();
-        final WorldEditFakePlayer fakePlayer;
+        final NeoForgeFakePlayer fakePlayer;
         try {
             fakePlayer = fakePlayers.get(world);
         } catch (ExecutionException ignored) {
@@ -271,12 +272,11 @@ public class NeoForgeWorld extends AbstractWorld {
         InteractionResult used = stack.onItemUseFirst(itemUseContext);
         if (used != InteractionResult.SUCCESS) {
             // try activating the block
-            InteractionResult resultType = getWorld().getBlockState(blockPos).useItemOn(stack, world, fakePlayer, InteractionHand.MAIN_HAND, rayTraceResult)
-                .result();
+            InteractionResult resultType = getWorld().getBlockState(blockPos).useItemOn(stack, world, fakePlayer, InteractionHand.MAIN_HAND, rayTraceResult);
             if (resultType.consumesAction()) {
                 used = resultType;
             } else {
-                used = stack.getItem().use(world, fakePlayer, InteractionHand.MAIN_HAND).getResult();
+                used = stack.getItem().use(world, fakePlayer, InteractionHand.MAIN_HAND);
             }
         }
         return used == InteractionResult.SUCCESS;
@@ -446,56 +446,84 @@ public class NeoForgeWorld extends AbstractWorld {
             case MANGROVE -> TreeFeatures.MANGROVE;
             case TALL_MANGROVE -> TreeFeatures.TALL_MANGROVE;
             case CHERRY -> TreeFeatures.CHERRY;
+            case PALE_OAK -> TreeFeatures.PALE_OAK;
+            case PALE_OAK_CREAKING -> TreeFeatures.PALE_OAK_CREAKING;
             case RANDOM -> createTreeFeatureGenerator(TreeType.values()[ThreadLocalRandom.current().nextInt(TreeType.values().length)]);
             default -> null;
         };
     }
 
     @Override
-    public boolean generateTree(TreeType type, EditSession editSession, BlockVector3 position) {
+    public boolean generateTree(TreeType type, EditSession editSession, BlockVector3 position) throws MaxChangedBlocksException {
         ServerLevel world = getWorld();
         ConfiguredFeature<?, ?> generator = Optional.ofNullable(createTreeFeatureGenerator(type))
-            .map(k -> world.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).get(k))
+            .flatMap(k -> world.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).getOptional(k))
             .orElse(null);
         ServerChunkCache chunkManager = world.getChunkSource();
         if (type == TreeType.CHORUS_PLANT) {
             position = position.add(0, 1, 0);
         }
-        WorldGenLevel levelProxy = NeoForgeServerLevelDelegateProxy.newInstance(editSession, world);
-        return generator != null && generator.place(
-            levelProxy, chunkManager.getGenerator(), random, NeoForgeAdapter.toBlockPos(position)
-        );
+        try (NeoForgeServerLevelDelegateProxy.LevelAndProxy levelProxy =
+                 NeoForgeServerLevelDelegateProxy.newInstance(editSession, world)) {
+            return generator != null && generator.place(
+                levelProxy.level(), chunkManager.getGenerator(), random, NeoForgeAdapter.toBlockPos(position)
+            );
+        }
     }
 
+    @Override
     public boolean generateFeature(ConfiguredFeatureType type, EditSession editSession, BlockVector3 position) {
         ServerLevel world = getWorld();
-        ConfiguredFeature<?, ?> k = world.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).get(ResourceLocation.tryParse(type.id()));
+        ConfiguredFeature<?, ?> feature = world.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).getValue(ResourceLocation.tryParse(type.id()));
         ServerChunkCache chunkManager = world.getChunkSource();
-        WorldGenLevel levelProxy = NeoForgeServerLevelDelegateProxy.newInstance(editSession, world);
-        return k != null && k.place(levelProxy, chunkManager.getGenerator(), random, NeoForgeAdapter.toBlockPos(position));
+        try (NeoForgeServerLevelDelegateProxy.LevelAndProxy levelProxy =
+                 NeoForgeServerLevelDelegateProxy.newInstance(editSession, world)) {
+            return feature != null && feature.place(levelProxy.level(), chunkManager.getGenerator(), random, NeoForgeAdapter.toBlockPos(position));
+        } catch (MaxChangedBlocksException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public boolean generateStructure(StructureType type, EditSession editSession, BlockVector3 position) {
         ServerLevel world = getWorld();
-        Structure k = world.registryAccess().registryOrThrow(Registries.STRUCTURE).get(ResourceLocation.tryParse(type.id()));
-        if (k == null) {
+        Registry<Structure> structureRegistry = world.registryAccess().lookupOrThrow(Registries.STRUCTURE);
+        Structure structure = structureRegistry.getValue(ResourceLocation.tryParse(type.id()));
+        if (structure == null) {
             return false;
         }
 
         ServerChunkCache chunkManager = world.getChunkSource();
-        WorldGenLevel proxyLevel = NeoForgeServerLevelDelegateProxy.newInstance(editSession, world);
-        ChunkPos chunkPos = new ChunkPos(new BlockPos(position.x(), position.y(), position.z()));
-        StructureStart structureStart = k.generate(world.registryAccess(), chunkManager.getGenerator(), chunkManager.getGenerator().getBiomeSource(), chunkManager.randomState(), world.getStructureManager(), world.getSeed(), chunkPos, 0, proxyLevel, biome -> true);
+        try (NeoForgeServerLevelDelegateProxy.LevelAndProxy levelProxy =
+                 NeoForgeServerLevelDelegateProxy.newInstance(editSession, world)) {
+            ChunkPos chunkPos = new ChunkPos(new BlockPos(position.x(), position.y(), position.z()));
+            StructureStart structureStart = structure.generate(
+                structureRegistry.wrapAsHolder(structure), world.dimension(), world.registryAccess(),
+                chunkManager.getGenerator(), chunkManager.getGenerator().getBiomeSource(), chunkManager.randomState(),
+                world.getStructureManager(), world.getSeed(), chunkPos, 0, levelProxy.level(),
+                biome -> true
+            );
 
-        if (!structureStart.isValid()) {
-            return false;
-        } else {
-            BoundingBox boundingBox = structureStart.getBoundingBox();
-            ChunkPos min = new ChunkPos(SectionPos.blockToSectionCoord(boundingBox.minX()), SectionPos.blockToSectionCoord(boundingBox.minZ()));
-            ChunkPos max = new ChunkPos(SectionPos.blockToSectionCoord(boundingBox.maxX()), SectionPos.blockToSectionCoord(boundingBox.maxZ()));
-            ChunkPos.rangeClosed(min, max).forEach((chunkPosx) -> structureStart.placeInChunk(proxyLevel, world.structureManager(), chunkManager.getGenerator(), world.getRandom(), new BoundingBox(chunkPosx.getMinBlockX(), world.getMinBuildHeight(), chunkPosx.getMinBlockZ(), chunkPosx.getMaxBlockX(), world.getMaxBuildHeight(), chunkPosx.getMaxBlockZ()), chunkPosx));
-            return true;
+            if (!structureStart.isValid()) {
+                return false;
+            } else {
+                BoundingBox boundingBox = structureStart.getBoundingBox();
+                ChunkPos min = new ChunkPos(SectionPos.blockToSectionCoord(boundingBox.minX()), SectionPos.blockToSectionCoord(boundingBox.minZ()));
+                ChunkPos max = new ChunkPos(SectionPos.blockToSectionCoord(boundingBox.maxX()), SectionPos.blockToSectionCoord(boundingBox.maxZ()));
+                ChunkPos.rangeClosed(min, max).forEach((chunkPosx) ->
+                    structureStart.placeInChunk(
+                        levelProxy.level(), world.structureManager(), chunkManager.getGenerator(), world.getRandom(),
+                        new BoundingBox(
+                            chunkPosx.getMinBlockX(), world.getMinY(), chunkPosx.getMinBlockZ(),
+                            chunkPosx.getMaxBlockX(), world.getMaxY(), chunkPosx.getMaxBlockZ()
+                        ),
+                        chunkPosx
+                    )
+                );
+                return true;
+            }
+        } catch (MaxChangedBlocksException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -586,12 +614,12 @@ public class NeoForgeWorld extends AbstractWorld {
 
     @Override
     public int getMinY() {
-        return getWorld().getMinBuildHeight();
+        return getWorld().getMinY();
     }
 
     @Override
     public int getMaxY() {
-        return getWorld().getMaxBuildHeight() - 1;
+        return getWorld().getMaxY();
     }
 
     @Override
@@ -685,7 +713,7 @@ public class NeoForgeWorld extends AbstractWorld {
         }
         tag.putString("id", entityId);
 
-        net.minecraft.world.entity.Entity createdEntity = EntityType.loadEntityRecursive(tag, world, (loadedEntity) -> {
+        net.minecraft.world.entity.Entity createdEntity = EntityType.loadEntityRecursive(tag, world, EntitySpawnReason.COMMAND, (loadedEntity) -> {
             loadedEntity.absMoveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
             return loadedEntity;
         });

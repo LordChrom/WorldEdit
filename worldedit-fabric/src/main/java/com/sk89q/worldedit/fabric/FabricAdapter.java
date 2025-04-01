@@ -41,6 +41,7 @@ import com.sk89q.worldedit.world.item.ItemType;
 import com.sk89q.worldedit.world.item.ItemTypes;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -54,7 +55,6 @@ import net.minecraft.world.level.BaseCommandBlock;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.Vec3;
 import org.enginehub.linbus.tree.LinCompoundTag;
 
@@ -93,7 +93,7 @@ public final class FabricAdapter {
 
     public static Biome adapt(BiomeType biomeType) {
         return FabricWorldEdit.getRegistry(Registries.BIOME)
-            .get(ResourceLocation.parse(biomeType.id()));
+            .getValue(ResourceLocation.parse(biomeType.id()));
     }
 
     public static BiomeType adapt(Biome biome) {
@@ -115,42 +115,28 @@ public final class FabricAdapter {
     }
 
     public static net.minecraft.core.Direction adapt(Direction face) {
-        switch (face) {
-            case NORTH:
-                return net.minecraft.core.Direction.NORTH;
-            case SOUTH:
-                return net.minecraft.core.Direction.SOUTH;
-            case WEST:
-                return net.minecraft.core.Direction.WEST;
-            case EAST:
-                return net.minecraft.core.Direction.EAST;
-            case DOWN:
-                return net.minecraft.core.Direction.DOWN;
-            case UP:
-            default:
-                return net.minecraft.core.Direction.UP;
-        }
+        return switch (face) {
+            case NORTH -> net.minecraft.core.Direction.NORTH;
+            case SOUTH -> net.minecraft.core.Direction.SOUTH;
+            case WEST -> net.minecraft.core.Direction.WEST;
+            case EAST -> net.minecraft.core.Direction.EAST;
+            case DOWN -> net.minecraft.core.Direction.DOWN;
+            default -> net.minecraft.core.Direction.UP;
+        };
     }
 
     public static Direction adaptEnumFacing(@Nullable net.minecraft.core.Direction face) {
         if (face == null) {
             return null;
         }
-        switch (face) {
-            case NORTH:
-                return Direction.NORTH;
-            case SOUTH:
-                return Direction.SOUTH;
-            case WEST:
-                return Direction.WEST;
-            case EAST:
-                return Direction.EAST;
-            case DOWN:
-                return Direction.DOWN;
-            case UP:
-            default:
-                return Direction.UP;
-        }
+        return switch (face) {
+            case NORTH -> Direction.NORTH;
+            case SOUTH -> Direction.SOUTH;
+            case WEST -> Direction.WEST;
+            case EAST -> Direction.EAST;
+            case DOWN -> Direction.DOWN;
+            default -> Direction.UP;
+        };
     }
 
     public static BlockPos toBlockPos(BlockVector3 vector) {
@@ -177,10 +163,12 @@ public final class FabricAdapter {
         Map<Property<?>, Object> props = new TreeMap<>(Comparator.comparing(Property::getName));
         for (Map.Entry<net.minecraft.world.level.block.state.properties.Property<?>, Comparable<?>> prop : mcProps.entrySet()) {
             Object value = prop.getValue();
-            if (prop.getKey() instanceof DirectionProperty) {
-                value = adaptEnumFacing((net.minecraft.core.Direction) value);
-            } else if (prop.getKey() instanceof net.minecraft.world.level.block.state.properties.EnumProperty) {
-                value = ((StringRepresentable) value).getSerializedName();
+            if (prop.getKey() instanceof net.minecraft.world.level.block.state.properties.EnumProperty) {
+                if (prop.getKey().getValueClass() == net.minecraft.core.Direction.class) {
+                    value = adaptEnumFacing((net.minecraft.core.Direction) value);
+                } else {
+                    value = ((StringRepresentable) value).getSerializedName();
+                }
             }
             props.put(block.getProperty(prop.getKey().getName()), value);
         }
@@ -208,18 +196,23 @@ public final class FabricAdapter {
         if (!blockEntity.hasLevel()) {
             throw new IllegalArgumentException("BlockEntity must have a level");
         }
+        RegistryAccess registries = blockEntity.getLevel().registryAccess();
+        return adapt(blockEntity, registries);
+    }
+
+    public static BaseBlock adapt(BlockEntity blockEntity, RegistryAccess registries) {
         int blockStateId = Block.getId(blockEntity.getBlockState());
         BlockState worldEdit = BlockStateIdAccess.getBlockStateById(blockStateId);
         if (worldEdit == null) {
             worldEdit = FabricTransmogrifier.transmogToWorldEdit(blockEntity.getBlockState());
         }
         // Save this outside the reference to ensure it doesn't mutate
-        CompoundTag savedNative = blockEntity.saveWithId(blockEntity.getLevel().registryAccess());
+        CompoundTag savedNative = blockEntity.saveWithId(registries);
         return worldEdit.toBaseBlock(LazyReference.from(() -> NBTConverter.fromNative(savedNative)));
     }
 
     public static Block adapt(BlockType blockType) {
-        return FabricWorldEdit.getRegistry(Registries.BLOCK).get(ResourceLocation.parse(blockType.id()));
+        return FabricWorldEdit.getRegistry(Registries.BLOCK).getValue(ResourceLocation.parse(blockType.id()));
     }
 
     public static BlockType adapt(Block block) {
@@ -227,7 +220,7 @@ public final class FabricAdapter {
     }
 
     public static Item adapt(ItemType itemType) {
-        return FabricWorldEdit.getRegistry(Registries.ITEM).get(ResourceLocation.parse(itemType.id()));
+        return FabricWorldEdit.getRegistry(Registries.ITEM).getValue(ResourceLocation.parse(itemType.id()));
     }
 
     public static ItemType adapt(Item item) {
