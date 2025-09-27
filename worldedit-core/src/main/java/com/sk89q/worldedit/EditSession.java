@@ -659,7 +659,7 @@ public class EditSession implements Extent, AutoCloseable {
         if (chunkBatchingExtent != null) {
             chunkBatchingExtent.setEnabled(false);
             assert batchingExtent != null : "same nullness as chunkBatchingExtent";
-//            batchingExtent.setEnabled(true);
+            // batchingExtent.setEnabled(true);
         }
     }
 
