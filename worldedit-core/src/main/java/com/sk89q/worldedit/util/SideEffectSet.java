@@ -22,11 +22,9 @@ package com.sk89q.worldedit.util;
 import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Maps;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
@@ -145,25 +143,14 @@ public class SideEffectSet {
 
     public static class GsonSerializer implements JsonSerializer<SideEffectSet>, JsonDeserializer<SideEffectSet> {
 
-        @Override
-        public SideEffectSet deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            Map<SideEffect, SideEffect.State> sideEffects = Maps.newEnumMap(SideEffect.class);
-            JsonObject obj = json.getAsJsonObject();
-            for (Map.Entry<String, JsonElement> stringJsonElementEntry : obj.entrySet()) {
-                SideEffect sideEffect = SideEffect.valueOf(stringJsonElementEntry.getKey());
-                SideEffect.State state = SideEffect.State.valueOf(stringJsonElementEntry.getValue().getAsString());
-                sideEffects.put(sideEffect, state);
-            }
-            return new SideEffectSet(sideEffects);
-        }
+		@Override
+		public SideEffectSet deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+			return new SideEffectSet(json.getAsInt());
+		}
 
-        @Override
-        public JsonElement serialize(SideEffectSet src, Type typeOfSrc, JsonSerializationContext context) {
-            JsonObject obj = new JsonObject();
-            for (Map.Entry<SideEffect, SideEffect.State> entry : src.sideEffects.entrySet()) {
-                obj.add(entry.getKey().name(), new JsonPrimitive(entry.getValue().name()));
-            }
-            return obj;
-        }
+		@Override
+		public JsonElement serialize(SideEffectSet src, Type typeOfSrc, JsonSerializationContext context) {
+			return new JsonPrimitive(src.sideEffectsBitmap);
+		}
     }
 }
