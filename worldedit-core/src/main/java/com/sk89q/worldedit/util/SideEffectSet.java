@@ -143,14 +143,14 @@ public class SideEffectSet {
 
     public static class GsonSerializer implements JsonSerializer<SideEffectSet>, JsonDeserializer<SideEffectSet> {
 
-		@Override
-		public SideEffectSet deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-			return new SideEffectSet(json.getAsInt());
-		}
+        @Override
+        public SideEffectSet deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            return new SideEffectSet(json.getAsInt());
+        }
 
-		@Override
-		public JsonElement serialize(SideEffectSet src, Type typeOfSrc, JsonSerializationContext context) {
-			return new JsonPrimitive(src.sideEffectsBitmap);
-		}
+        @Override
+        public JsonElement serialize(SideEffectSet src, Type typeOfSrc, JsonSerializationContext context) {
+            return new JsonPrimitive(src.sideEffectsBitmap);
+        }
     }
 }
