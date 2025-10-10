@@ -58,6 +58,7 @@ import com.sk89q.worldedit.regions.ConvexPolyhedralRegion;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.RegionOperationException;
+import com.sk89q.worldedit.util.SideEffect;
 import com.sk89q.worldedit.util.SideEffectSet;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
 import com.sk89q.worldedit.util.formatting.component.TextUtils;
@@ -601,7 +602,7 @@ public class RegionCommands {
                 SideEffectSet sideEffectSet) throws WorldEditException {
         if (sideEffectSet == null) {
             // Use defaults if none supplied.
-            sideEffectSet = SideEffectSet.defaults();
+            sideEffectSet = SideEffectSet.all();
         }
         RegionFunction apply = new ApplySideEffect(injectedWorld, sideEffectSet);
         if (session.getMask() != null) {

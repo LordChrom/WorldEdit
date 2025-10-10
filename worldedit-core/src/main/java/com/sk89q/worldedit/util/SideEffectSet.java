@@ -45,6 +45,11 @@ public class SideEffectSet {
             .filter(SideEffect::isExposed)
             .collect(Collectors.toMap(Function.identity(), state -> SideEffect.State.OFF))
     );
+    private static final SideEffectSet ALL = new SideEffectSet(
+            Arrays.stream(SideEffect.values())
+                    .filter(SideEffect::isExposed)
+                    .collect(Collectors.toMap(Function.identity(), state -> SideEffect.State.ON))
+    );
 
     static {
         Verify.verify(
@@ -139,6 +144,10 @@ public class SideEffectSet {
 
     public static SideEffectSet none() {
         return NONE;
+    }
+
+    public static SideEffectSet all(){
+        return ALL;
     }
 
     public static class GsonSerializer implements JsonSerializer<SideEffectSet>, JsonDeserializer<SideEffectSet> {
