@@ -61,7 +61,7 @@ public class TargetBlock {
     public TargetBlock(Player player) {
         this.world = player.getWorld();
         this.setValues(player.getLocation().toVector(), player.getLocation().getYaw(), player.getLocation().getPitch(),
-                300, 1.65, 0.2);
+                300, player.getViewHeight(), 0.2);
         this.stopMask = new ExistingBlockMask(world);
         this.solidMask = new SolidBlockMask(world);
     }
@@ -75,7 +75,7 @@ public class TargetBlock {
      */
     public TargetBlock(Player player, int maxDistance, double checkDistance) {
         this.world = player.getWorld();
-        this.setValues(player.getLocation().toVector(), player.getLocation().getYaw(), player.getLocation().getPitch(), maxDistance, 1.65, checkDistance);
+        this.setValues(player.getLocation().toVector(), player.getLocation().getYaw(), player.getLocation().getPitch(), maxDistance, player.getViewHeight(), checkDistance);
         this.stopMask = new ExistingBlockMask(world);
         this.solidMask = new SolidBlockMask(world);
     }

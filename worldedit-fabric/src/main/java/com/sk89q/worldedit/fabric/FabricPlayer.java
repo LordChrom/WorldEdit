@@ -291,4 +291,9 @@ public class FabricPlayer extends AbstractPlayerActor {
 
     }
 
+    @Override
+    public double getViewHeight(){
+        return player.getEyeHeight();
+    }
+
 }

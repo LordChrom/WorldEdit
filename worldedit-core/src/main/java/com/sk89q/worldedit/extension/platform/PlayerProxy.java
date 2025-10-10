@@ -195,6 +195,11 @@ class PlayerProxy extends AbstractPlayerActor {
     }
 
     @Override
+    public double getViewHeight() {
+        return basePlayer.getViewHeight();
+    }
+
+    @Override
     public Locale getLocale() {
         return basePlayer.getLocale();
     }

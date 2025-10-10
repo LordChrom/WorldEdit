@@ -208,6 +208,13 @@ public interface Player extends Entity, Actor {
     Location getBlockOn();
 
     /**
+     * Get the height of the player's eyes above their feet.
+     *
+     * @return the height
+     */
+    double getViewHeight();
+
+    /**
      * Get the point of the block being looked at. May return null.
      * Will return the farthest away air block if useLastBlock is true and no other block is found.
      *

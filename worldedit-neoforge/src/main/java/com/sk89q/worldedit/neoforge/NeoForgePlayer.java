@@ -292,4 +292,9 @@ public class NeoForgePlayer extends AbstractPlayerActor {
 
     }
 
+    @Override
+    public double getViewHeight(){
+        return player.getEyeHeight();
+    }
+
 }
