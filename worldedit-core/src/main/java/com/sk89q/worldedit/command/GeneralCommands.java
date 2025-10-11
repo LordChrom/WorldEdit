@@ -230,6 +230,7 @@ public class GeneralCommands {
         desc = "Toggle side effects for performance",
         descFooter = "Note that this command is GOING to change in the future."
             + " Do not depend on the exact format of this command yet."
+            + " Also, in this fork of worldedit, these settings are saved persistently."
     )
     @CommandPermissions("worldedit.perf")
     void perf(Actor actor, LocalSession session,
