@@ -313,7 +313,7 @@ public class BukkitPlayer extends AbstractPlayerActor {
     }
 
     @Override
-    public double getViewHeight(){
+    public double getViewHeight() {
         return player.getEyeHeight();
     }
 
