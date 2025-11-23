@@ -8,8 +8,8 @@ pluginManagement {
     }
 }
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
-    id("fabric-loom") version "1.11.4"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    id("fabric-loom") version "1.13.4"
 }
 dependencyResolutionManagement {
     repositories {
@@ -71,7 +71,7 @@ includeBuild("build-logic")
 
 include("worldedit-libs")
 
-listOf("1.21.3", "1.21.4", "1.21.5", "1.21.6").forEach {
+listOf("1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.9").forEach {
     include("worldedit-bukkit:adapters:adapter-$it")
 }
 

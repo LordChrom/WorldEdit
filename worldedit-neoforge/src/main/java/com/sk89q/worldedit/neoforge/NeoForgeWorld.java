@@ -345,7 +345,6 @@ public class NeoForgeWorld extends AbstractWorld {
                     originalWorld.dimensionTypeRegistration(),
                     originalWorld.getChunkSource().getGenerator()
                 ),
-                new WorldEditGenListener(),
                 originalWorld.isDebug(),
                 seed,
                 // No spawners are needed for this world.
@@ -627,7 +626,7 @@ public class NeoForgeWorld extends AbstractWorld {
 
     @Override
     public BlockVector3 getSpawnPosition() {
-        return NeoForgeAdapter.adapt(getWorld().getLevelData().getSpawnPos());
+        return NeoForgeAdapter.adapt(getWorld().getLevelData().getRespawnData().pos());
     }
 
     @Override
@@ -750,5 +749,10 @@ public class NeoForgeWorld extends AbstractWorld {
                 return NeoForgeAdapter.adapt(getExtent().getBlock(vector)).getBlock() instanceof LiquidBlock;
             }
         };
+    }
+
+    @Override
+    public boolean isValid() {
+        return worldRef.get() != null;
     }
 }
