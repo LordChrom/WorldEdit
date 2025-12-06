@@ -21,15 +21,13 @@ package com.sk89q.worldedit.command;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.LocalSession;
-import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.WorldEditException;
+import com.sk89q.worldedit.*;
 import com.sk89q.worldedit.command.util.CommandPermissions;
 import com.sk89q.worldedit.command.util.CommandPermissionsConditionGenerator;
 import com.sk89q.worldedit.command.util.Logging;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.extension.platform.Actor;
+import com.sk89q.worldedit.extent.clipboard.BlockArrayClipboard;
 import com.sk89q.worldedit.function.GroundFunction;
 import com.sk89q.worldedit.function.RegionFunction;
 import com.sk89q.worldedit.function.RegionMaskingFilter;
@@ -58,6 +56,7 @@ import com.sk89q.worldedit.regions.ConvexPolyhedralRegion;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.regions.RegionOperationException;
+import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.util.SideEffectSet;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
 import com.sk89q.worldedit.util.formatting.component.TextUtils;
@@ -66,6 +65,9 @@ import com.sk89q.worldedit.util.formatting.text.TextComponent;
 import com.sk89q.worldedit.util.formatting.text.TranslatableComponent;
 import com.sk89q.worldedit.world.RegenOptions;
 import com.sk89q.worldedit.world.World;
+import com.sk89q.worldedit.world.block.BaseBlock;
+import com.sk89q.worldedit.world.block.BlockTypes;
+import org.enginehub.linbus.tree.LinCompoundTag;
 import org.enginehub.piston.annotation.Command;
 import org.enginehub.piston.annotation.CommandContainer;
 import org.enginehub.piston.annotation.param.Arg;
@@ -612,5 +614,56 @@ public class RegionCommands {
         Operations.complete(visitor);
 
         actor.printInfo(TranslatableComponent.of("worldedit.update"));
+    }
+
+
+
+
+    private BaseBlock gatewayToActor(Actor actor, LocalSession session) throws IncompleteRegionException {
+        BlockVector3 actorPos = session.getPlacementPosition(actor);
+
+        int[] exitGateway = {actorPos.x(),actorPos.y(),actorPos.z()};
+
+        LinCompoundTag.Builder gatewayTag = LinCompoundTag.builder();
+        gatewayTag.putIntArray("exit_portal",exitGateway);
+        gatewayTag.putByte("ExactTeleport",(byte)1);
+        gatewayTag.putLong("Age",Long.MIN_VALUE);
+
+        return BlockTypes.END_GATEWAY.getDefaultState().toBaseBlock(gatewayTag.build());
+    }
+
+
+    @Command(
+            name = "/gateget",
+            desc = "Copies a gateway to your position"
+    )
+    @CommandPermissions("worldedit.clipboard.copy")
+    public void gateget(Actor actor, LocalSession session) throws IncompleteRegionException {
+
+        BlockVector3 zero = BlockVector3.ZERO;
+        Region region = new CuboidRegion(zero,zero);
+        BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
+        clipboard.setOrigin(zero);
+
+        BaseBlock gateway = gatewayToActor(actor,session);
+        clipboard.setBlock(zero,gateway);
+
+        session.setClipboard(new ClipboardHolder(clipboard));
+
+        BlockVector3 actorPos = session.getPlacementPosition(actor);
+        actor.printInfo(TextComponent.of("Copied end gateway to "+actorPos.x()+", "+actorPos.y()+", "+actorPos.z()+"."));
+    }
+
+
+    @Command(
+            name = "/gateset",
+            desc = "Sets selection to gateways to your position"
+    )
+    @CommandPermissions("worldedit.region.set")
+    @Logging(REGION)
+    public int gateset(Actor actor, LocalSession session,EditSession editSession, @Selection Region region) throws IncompleteRegionException {
+        BaseBlock gateway = gatewayToActor(actor,session);
+        return set(actor,editSession,region,gateway);
+
     }
 }
