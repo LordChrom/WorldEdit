@@ -146,7 +146,7 @@ public class SideEffectSet {
         return NONE;
     }
 
-    public static SideEffectSet all(){
+    public static SideEffectSet all() {
         return ALL;
     }
 

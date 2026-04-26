@@ -21,7 +21,11 @@ package com.sk89q.worldedit.command;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.sk89q.worldedit.*;
+import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.IncompleteRegionException;
+import com.sk89q.worldedit.LocalSession;
+import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.command.util.CommandPermissions;
 import com.sk89q.worldedit.command.util.CommandPermissionsConditionGenerator;
 import com.sk89q.worldedit.command.util.Logging;
@@ -622,48 +626,46 @@ public class RegionCommands {
     private BaseBlock gatewayToActor(Actor actor, LocalSession session) throws IncompleteRegionException {
         BlockVector3 actorPos = session.getPlacementPosition(actor);
 
-        int[] exitGateway = {actorPos.x(),actorPos.y(),actorPos.z()};
+        int[] exitGateway = {actorPos.x(), actorPos.y(), actorPos.z()};
 
         LinCompoundTag.Builder gatewayTag = LinCompoundTag.builder();
-        gatewayTag.putIntArray("exit_portal",exitGateway);
-        gatewayTag.putByte("ExactTeleport",(byte)1);
-        gatewayTag.putLong("Age",Long.MIN_VALUE);
+        gatewayTag.putIntArray("exit_portal", exitGateway);
+        gatewayTag.putByte("ExactTeleport", (byte) 1);
+        gatewayTag.putLong("Age", Long.MIN_VALUE);
 
         return BlockTypes.END_GATEWAY.getDefaultState().toBaseBlock(gatewayTag.build());
     }
 
-
     @Command(
-            name = "/gateget",
-            desc = "Copies a gateway to your position"
+        name = "/gateget",
+        desc = "Copies a gateway to your position"
     )
-    @CommandPermissions("worldedit.clipboard.copy")
+    @CommandPermissions("worldedit.endgates.get")
     public void gateget(Actor actor, LocalSession session) throws IncompleteRegionException {
 
         BlockVector3 zero = BlockVector3.ZERO;
-        Region region = new CuboidRegion(zero,zero);
+        Region region = new CuboidRegion(zero, zero);
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(zero);
 
-        BaseBlock gateway = gatewayToActor(actor,session);
-        clipboard.setBlock(zero,gateway);
+        BaseBlock gateway = gatewayToActor(actor, session);
+        clipboard.setBlock(zero, gateway);
 
         session.setClipboard(new ClipboardHolder(clipboard));
 
         BlockVector3 actorPos = session.getPlacementPosition(actor);
-        actor.printInfo(TextComponent.of("Copied end gateway to "+actorPos.x()+", "+actorPos.y()+", "+actorPos.z()+"."));
+        actor.printInfo(TextComponent.of("Copied end gateway to " + actorPos.x() + ", " + actorPos.y() + ", " + actorPos.z() + "."));
     }
 
-
     @Command(
-            name = "/gateset",
-            desc = "Sets selection to gateways to your position"
+        name = "/gateset",
+        desc = "Sets selection to gateways to your position"
     )
-    @CommandPermissions("worldedit.region.set")
+    @CommandPermissions("worldedit.endgates.set")
     @Logging(REGION)
-    public int gateset(Actor actor, LocalSession session,EditSession editSession, @Selection Region region) throws IncompleteRegionException {
-        BaseBlock gateway = gatewayToActor(actor,session);
-        return set(actor,editSession,region,gateway);
+    public int gateset(Actor actor, LocalSession session, EditSession editSession, @Selection Region region) throws IncompleteRegionException {
+        BaseBlock gateway = gatewayToActor(actor, session);
+        return set(actor, editSession, region, gateway);
 
     }
 }
