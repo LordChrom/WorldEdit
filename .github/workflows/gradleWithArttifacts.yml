@@ -1,5 +1,5 @@
 name: Gradle With Artifacts
-on: []
+on: workflow_dispatch
 
 jobs:
   build:
