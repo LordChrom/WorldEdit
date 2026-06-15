@@ -398,15 +398,15 @@ public class EditSession implements Extent, AutoCloseable {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
                 }
                 reorderExtent.setEnabled(true);
-            	yield dummyValue();
-			}
+                yield dummyValue();
+            }
             case FAST -> {
                 sideEffectExtent.setPostEditSimulationEnabled(true);
                 if (reorderExtent != null) {
                     reorderExtent.setEnabled(false);
                 }
-            	yield dummyValue();
-			}
+                yield dummyValue();
+            }
             case NONE -> {
                 if (sideEffectExtent != null) {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
@@ -414,8 +414,8 @@ public class EditSession implements Extent, AutoCloseable {
                 if (reorderExtent != null) {
                     reorderExtent.setEnabled(false);
                 }
-            	yield dummyValue();
-			}
+                yield dummyValue();
+            }
         });
     }
 
