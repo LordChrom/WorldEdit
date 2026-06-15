@@ -142,8 +142,6 @@ import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.sk89q.worldedit.internal.util.SwitchEnhancements.dummyValue;
-import static com.sk89q.worldedit.internal.util.SwitchEnhancements.exhaustive;
 import static com.sk89q.worldedit.regions.Regions.asFlatRegion;
 import static com.sk89q.worldedit.regions.Regions.maximumBlockY;
 import static com.sk89q.worldedit.regions.Regions.minimumBlockY;
@@ -393,21 +391,21 @@ public class EditSession implements Extent, AutoCloseable {
 
         this.reorderMode = reorderMode;
         switch (reorderMode) {
-            case MULTI_STAGE:
+            case MULTI_STAGE -> {
                 if (sideEffectExtent != null) {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
                 }
                 reorderExtent.setEnabled(true);
                 batchingExtent.setEnabled(false);
-                break;
-            case FAST:
+            }
+            case FAST -> {
                 sideEffectExtent.setPostEditSimulationEnabled(true);
                 if (reorderExtent != null) {
                     reorderExtent.setEnabled(false);
                 }
                 batchingExtent.setEnabled(true);
-                break;
-            case NONE:
+            }
+            case NONE -> {
                 if (sideEffectExtent != null) {
                     sideEffectExtent.setPostEditSimulationEnabled(false);
                 }
@@ -415,9 +413,9 @@ public class EditSession implements Extent, AutoCloseable {
                     reorderExtent.setEnabled(false);
                 }
                 batchingExtent.setEnabled(true);
-                break;
-            default:
-                break;
+            }
+            default -> {
+            }
         }
     }
 

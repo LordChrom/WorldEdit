@@ -316,7 +316,7 @@ public class SpongePlayer extends AbstractPlayerActor {
     }
 
     @Override
-    public double getViewHeight(){
+    public double getViewHeight() {
         return player.get(Keys.EYE_HEIGHT).orElse(1.65);
     }
 

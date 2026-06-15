@@ -1204,6 +1204,7 @@ public class LocalSession {
      *
      * @param fastMode true if fast mode is enabled
      */
+    @SuppressWarnings("InlineMeSuggester")
     @Deprecated
     public void setFastMode(boolean fastMode) {
         setSideEffectSet(fastMode ? SideEffectSet.none() : SideEffectSet.defaults());
