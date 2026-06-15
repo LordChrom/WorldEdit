@@ -164,6 +164,11 @@ public abstract class AbstractWorld implements World {
     public void setWeather(WeatherType weatherType, long duration) {
     }
 
+    @Override
+    public boolean isValid() {
+        return true;
+    }
+
     private class QueuedEffect implements Comparable<QueuedEffect> {
         private final Vector3 position;
         private final BlockType blockType;
@@ -176,7 +181,7 @@ public abstract class AbstractWorld implements World {
         }
 
         @SuppressWarnings("deprecation")
-        public void play() {
+        private void play() {
             playEffect(position, 2001, blockType.getLegacyId());
         }
 

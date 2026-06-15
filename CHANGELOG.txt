@@ -1,3 +1,23 @@
+7.3.19
+- General cleanups across codebase
+- Final release of the 7.3.x series in preparation for 7.4 release
+- [Bukkit] Add a separate Gradle configuration for reobfuscation to better prepare for MC 26.1 support without dropping prior versions
+- [Bukkit] Drop 1.21.3 adapters due to resource constraints
+- [Bukkit] Tweaked logic to detect Mojang mappings to be more reliable with recent changes to non-mojmapped (Spigot) environments
+
+7.3.18
+- Added support for 1.21.11
+- Improved rotation of special rail blocks (activator, detector, powered, etc)
+
+7.3.17
+- Added support for 1.21.9 & 1.21.10
+- Improved rotation of crafter blocks
+- Improved rotation of rail blocks
+- Improved rotation of item frames
+- Fixed convex shapes behaving incorrectly when three points in a straight line are selected
+- Fixed a case where other mods/plugins can make errors less useful
+- Fixed errors caused by unloaded worlds being used as //world overrides
+
 7.3.16
 - Added support for 1.21.8
 

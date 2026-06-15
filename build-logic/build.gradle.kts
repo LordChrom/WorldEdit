@@ -3,21 +3,30 @@ plugins {
 }
 
 repositories {
-    gradlePluginPortal()
     maven {
-        name = "EngineHub Repository"
-        url = uri("https://maven.enginehub.org/repo/")
+        name = "SpongePowered Snapshots"
+        url = uri("https://repo.spongepowered.org/repository/maven-snapshots/")
     }
+    maven {
+        name = "NeoForged"
+        url = uri("https://maven.neoforged.net/releases/")
+    }
+    maven {
+        name = "MinecraftForge"
+        url = uri("https://maven.minecraftforge.net/")
+    }
+    mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
     implementation(gradleApi())
-    implementation(libs.licenser)
-    implementation(libs.grgit)
+    implementation(libs.levelHeadered)
     implementation(libs.japicmp)
     implementation(libs.shadow)
     implementation(libs.jfrog.buildinfo)
     implementation(libs.paperweight)
+    implementation(libs.errorprone.gradle.plugin)
     implementation(libs.gson)
 
     implementation(libs.sponge.vanillagradle)

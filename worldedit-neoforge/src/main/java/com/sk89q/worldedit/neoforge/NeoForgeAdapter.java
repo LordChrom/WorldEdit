@@ -45,7 +45,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
@@ -83,8 +83,8 @@ public final class NeoForgeAdapter {
      */
     public static ServerLevel adapt(World world) {
         checkNotNull(world);
-        if (world instanceof NeoForgeWorld) {
-            return ((NeoForgeWorld) world).getWorld();
+        if (world instanceof NeoForgeWorld neoForgeWorld) {
+            return neoForgeWorld.getWorld();
         } else {
             // TODO introduce a better cross-platform world API to match more easily
             throw new UnsupportedOperationException("Cannot adapt from a " + world.getClass());
@@ -95,12 +95,12 @@ public final class NeoForgeAdapter {
         return ServerLifecycleHooks.getCurrentServer()
             .registryAccess()
             .lookupOrThrow(Registries.BIOME)
-            .getOptional(ResourceLocation.parse(biomeType.id()))
+            .getOptional(Identifier.parse(biomeType.id()))
             .orElseThrow(() -> new IllegalStateException("No biome for " + biomeType.id()));
     }
 
     public static BiomeType adapt(Biome biome) {
-        ResourceLocation id = ServerLifecycleHooks.getCurrentServer()
+        Identifier id = ServerLifecycleHooks.getCurrentServer()
             .registryAccess()
             .lookupOrThrow(Registries.BIOME)
             .getKey(biome);
@@ -154,6 +154,8 @@ public final class NeoForgeAdapter {
      *
      * @deprecated without replacement, use the block adapter methods
      */
+    // Suppress InlineMeSuggester: There is no replacement, so this shouldn't be inlined
+    @SuppressWarnings("InlineMeSuggester")
     @Deprecated
     public static Property<?> adaptProperty(net.minecraft.world.level.block.state.properties.Property<?> property) {
         return NeoForgeTransmogrifier.transmogToWorldEditProperty(property);
@@ -199,7 +201,7 @@ public final class NeoForgeAdapter {
     }
 
     public static Block adapt(BlockType blockType) {
-        return BuiltInRegistries.BLOCK.getValue(ResourceLocation.parse(blockType.id()));
+        return BuiltInRegistries.BLOCK.getValue(Identifier.parse(blockType.id()));
     }
 
     public static BlockType adapt(Block block) {
@@ -207,7 +209,7 @@ public final class NeoForgeAdapter {
     }
 
     public static Item adapt(ItemType itemType) {
-        return BuiltInRegistries.ITEM.getValue(ResourceLocation.parse(itemType.id()));
+        return BuiltInRegistries.ITEM.getValue(Identifier.parse(itemType.id()));
     }
 
     public static ItemType adapt(Item item) {
@@ -267,7 +269,7 @@ public final class NeoForgeAdapter {
             return adaptPlayer(commandSourceStack.getPlayer());
         }
         if (NeoForgeWorldEdit.inst.getConfig().commandBlockSupport && commandSourceStack.source instanceof BaseCommandBlock commandBlock) {
-            return new NeoForgeBlockCommandSender(commandBlock);
+            return new NeoForgeBlockCommandSender(commandBlock, commandSourceStack.getLevel(), commandSourceStack.getPosition());
         }
 
         return new NeoForgeCommandSender(commandSourceStack);

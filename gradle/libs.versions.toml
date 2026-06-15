@@ -1,32 +1,33 @@
 [plugins]
-codecov = "org.enginehub.codecov:0.2.0"
 neogradle-userdev = { id = "net.neoforged.gradle.userdev", version.ref = "neogradle" }
-sponge-spongegradle = "org.spongepowered.gradle.plugin:2.2.0"
+sponge-spongegradle = "org.spongepowered.gradle.plugin:2.3.0"
 sponge-vanillagradle = { id = "org.spongepowered.gradle.vanilla", version.ref = "sponge-vanillagradle" }
 
 [versions]
 kyoriText = "3.0.4"
-piston = "0.5.10"
+piston = "0.5.11"
 autoValue = "1.10.4"
-antlr = "4.13.1"
+antlr = "4.13.2"
 cuiProtocol = "4.0.2"
 
-fabric-api = "0.129.0+1.21.8"
+errorprone = "2.45.0"
 
-neogradle = "7.0.190"
-neoforge-minecraft = "1.21.8"
+fabric-api = "0.141.1+1.21.11"
 
-sponge-minecraft = "1.21.7"
+neogradle = "7.1.20"
+neoforge-minecraft = "1.21.11"
+
+sponge-minecraft = "1.21.11"
 # https://repo.spongepowered.org/service/rest/repository/browse/maven-public/org/spongepowered/spongeapi/
-sponge-api = "16.0.0-20250709.144533-2"
-sponge-api-major = "16"
+sponge-api = "18.0.0-20260114.133414-3"
+sponge-api-major = "18"
 
 # https://parchmentmc.org/docs/getting-started; note that we use older MC versions some times which is OK
-parchment-minecraft = "1.21.5"
-parchment-mappings = "2025.06.15"
+parchment-minecraft = "1.21.10"
+parchment-mappings = "2025.10.12"
 
 # https://repo.spongepowered.org/service/rest/repository/browse/maven-public/org/spongepowered/vanillagradle/
-sponge-vanillagradle = "0.2.1-20250105.203323-92"
+sponge-vanillagradle = "0.2.2-20251112.100313-2"
 
 # Minimum versions we apply to make dependencies support newer Java
 minimumAsm = "9.7"
@@ -34,23 +35,26 @@ minimumJdependency = "2.10"
 minimumTinyRemapper = "0.8.11"
 
 # https://repo.enginehub.org/language-files/com/sk89q/worldedit/worldedit-lang/
-lang-worldeditBase = "7.3.15"
-lang-version = "1865"
+lang-worldeditBase = "7.3.19"
+lang-version = "2062"
 
 [libraries]
 neogradle-neoform = { module = "net.neoforged.gradle:neoform", version.ref = "neogradle" }
 sponge-vanillagradle = { module = "org.spongepowered:vanillagradle", version.ref = "sponge-vanillagradle" }
 
-licenser = "gradle.plugin.org.cadixdev.gradle:licenser:0.6.1"
-grgit = "org.ajoberstar.grgit:grgit-gradle:5.2.2"
+levelHeadered = "net.octyl.level-headered:plugin:0.1.1"
 japicmp = "me.champeau.gradle:japicmp-gradle-plugin:0.4.6"
-shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.8"
-jfrog-buildinfo = "org.jfrog.buildinfo:build-info-extractor-gradle:5.2.5"
+shadow = "com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9"
+jfrog-buildinfo = "org.jfrog.buildinfo:build-info-extractor-gradle:6.0.4"
+
+errorprone-gradle-plugin = "net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin:4.3.0"
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+errorprone-annotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorprone" }
 
 # https://maven.fabricmc.net/net/fabricmc/sponge-mixin/
-fabric-mixin = "net.fabricmc:sponge-mixin:0.16.1+mixin.0.8.7"
+fabric-mixin = "net.fabricmc:sponge-mixin:0.17.0+mixin.0.8.7"
 
-paperweight = "io.papermc.paperweight.userdev:io.papermc.paperweight.userdev.gradle.plugin:2.0.0-beta.18"
+paperweight = "io.papermc.paperweight.userdev:io.papermc.paperweight.userdev.gradle.plugin:2.0.0-beta.19"
 
 linBus-bom = "org.enginehub.lin-bus:lin-bus-bom:0.2.0"
 linBus-common.module = "org.enginehub.lin-bus:lin-bus-common"
@@ -62,12 +66,12 @@ autoService = "com.google.auto.service:auto-service:1.1.1"
 
 jsr305 = "com.google.code.findbugs:jsr305:3.0.2"
 jetbrains-annotations = "org.jetbrains:annotations:24.1.0"
-errorprone-annotations = "com.google.errorprone:error_prone_annotations:2.11.0"
 
-junit-bom = "org.junit:junit-bom:5.10.2"
+junit-bom = "org.junit:junit-bom:6.0.1"
 junit-jupiter-api.module = "org.junit.jupiter:junit-jupiter-api"
 junit-jupiter-params.module = "org.junit.jupiter:junit-jupiter-params"
 junit-jupiter-engine.module = "org.junit.jupiter:junit-jupiter-engine"
+junit-platform-launcher.module = "org.junit.platform:junit-platform-launcher"
 
 jqwik = "net.jqwik:jqwik:1.9.0"
 
@@ -90,19 +94,19 @@ rhino = "org.mozilla:rhino-runtime:1.7.13"
 jchronic = "com.sk89q:jchronic:0.2.4a"
 jlibnoise = "com.sk89q.lib:jlibnoise:1.0.0"
 
-fabric-minecraft = "com.mojang:minecraft:1.21.7"
-fabric-loader = "net.fabricmc:fabric-loader:0.16.14"
-fabric-permissions-api = "me.lucko:fabric-permissions-api:0.4.0"
+fabric-minecraft = "com.mojang:minecraft:1.21.11"
+fabric-loader = "net.fabricmc:fabric-loader:0.18.4"
+fabric-permissions-api = "me.lucko:fabric-permissions-api:0.6.1"
 
-neoforge = "net.neoforged:neoforge:21.8.1-beta"
+neoforge = "net.neoforged:neoforge:21.11.34-beta"
 
 # Mojang-provided libraries, CHECK AGAINST MINECRAFT for versions
-guava = "com.google.guava:guava:33.3.1-jre!!"
+guava = "com.google.guava:guava:33.5.0-jre!!"
 log4j-bom = "org.apache.logging.log4j:log4j-bom:2.24.1!!"
 log4j-api.module = "org.apache.logging.log4j:log4j-api"
 log4j-core.module = "org.apache.logging.log4j:log4j-core"
-gson = "com.google.code.gson:gson:2.11.0!!"
-fastutil = "it.unimi.dsi:fastutil:8.5.15!!"
+gson = "com.google.code.gson:gson:2.13.2!!"
+fastutil = "it.unimi.dsi:fastutil:8.5.18!!"
 
 # Bukkit-provided libraries, CHECK AGAINST SPIGOT for versions
 # Note that we need to balance support for older MC versus working at all on newer ones, so the exact versions here
@@ -165,9 +169,9 @@ version.ref = "antlr"
 module = "org.antlr:antlr4-runtime"
 
 [libraries.cuiProtocol-fabric]
-module = "org.enginehub.worldeditcui-protocol:worldeditcui-protocol-fabric-mc1.21.8"
+module = "org.enginehub.worldeditcui-protocol:worldeditcui-protocol-fabric-mc1.21.11"
 version.ref = "cuiProtocol"
 
 [libraries.cuiProtocol-neoforge]
-module = "org.enginehub.worldeditcui-protocol:worldeditcui-protocol-neoforge-mc1.21.8"
+module = "org.enginehub.worldeditcui-protocol:worldeditcui-protocol-neoforge-mc1.21.11"
 version.ref = "cuiProtocol"

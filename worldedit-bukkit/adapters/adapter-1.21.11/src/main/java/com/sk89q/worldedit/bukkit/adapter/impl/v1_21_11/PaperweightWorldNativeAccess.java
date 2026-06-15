@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.sk89q.worldedit.bukkit.adapter.impl.v1_21_3;
+package com.sk89q.worldedit.bukkit.adapter.impl.v1_21_11;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.internal.block.BlockStateIdAccess;
@@ -85,7 +85,7 @@ public class PaperweightWorldNativeAccess implements WorldNativeAccess<LevelChun
     @Nullable
     @Override
     public net.minecraft.world.level.block.state.BlockState setBlockState(LevelChunk chunk, BlockPos position, net.minecraft.world.level.block.state.BlockState state) {
-        return chunk.setBlockState(position, state, false, this.sideEffectSet.shouldApply(SideEffect.UPDATE));
+        return chunk.setBlockState(position, state, this.sideEffectSet.shouldApply(SideEffect.UPDATE) ? 0 : 512);
     }
 
     @Override
@@ -142,12 +142,12 @@ public class PaperweightWorldNativeAccess implements WorldNativeAccess<LevelChun
         } else {
             // When we don't want events, manually run the physics without them.
             Block block = oldState.getBlock();
-            fireNeighborChanged(pos, world, block, pos.west());
-            fireNeighborChanged(pos, world, block, pos.east());
-            fireNeighborChanged(pos, world, block, pos.below());
-            fireNeighborChanged(pos, world, block, pos.above());
-            fireNeighborChanged(pos, world, block, pos.north());
-            fireNeighborChanged(pos, world, block, pos.south());
+            fireNeighborChanged(world, block, pos.west());
+            fireNeighborChanged(world, block, pos.east());
+            fireNeighborChanged(world, block, pos.below());
+            fireNeighborChanged(world, block, pos.above());
+            fireNeighborChanged(world, block, pos.north());
+            fireNeighborChanged(world, block, pos.south());
         }
         if (newState.hasAnalogOutputSignal()) {
             world.updateNeighbourForOutputSignal(pos, newState.getBlock());
@@ -160,7 +160,7 @@ public class PaperweightWorldNativeAccess implements WorldNativeAccess<LevelChun
         newState.onPlace(world, pos, oldState, false);
     }
 
-    private void fireNeighborChanged(BlockPos pos, ServerLevel world, Block block, BlockPos neighborPos) {
+    private void fireNeighborChanged(ServerLevel world, Block block, BlockPos neighborPos) {
         world.getBlockState(neighborPos).handleNeighborChanged(world, neighborPos, block, ExperimentalRedstoneUtils.initialOrientation(world, null, null), false);
     }
 
@@ -182,6 +182,6 @@ public class PaperweightWorldNativeAccess implements WorldNativeAccess<LevelChun
 
     @Override
     public void onBlockStateChange(BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState, net.minecraft.world.level.block.state.BlockState newState) {
-        getWorld().onBlockStateChange(pos, oldState, newState);
+        getWorld().updatePOIOnBlockStateChange(pos, oldState, newState);
     }
 }

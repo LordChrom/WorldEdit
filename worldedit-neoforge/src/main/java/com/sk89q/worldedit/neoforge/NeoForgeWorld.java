@@ -29,6 +29,7 @@ import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.Futures;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
+import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseItem;
 import com.sk89q.worldedit.blocks.BaseItemStack;
@@ -64,7 +65,6 @@ import com.sk89q.worldedit.world.generation.StructureType;
 import com.sk89q.worldedit.world.item.ItemTypes;
 import com.sk89q.worldedit.world.weather.WeatherType;
 import com.sk89q.worldedit.world.weather.WeatherTypes;
-import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -72,12 +72,13 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.EndFeatures;
 import net.minecraft.data.worldgen.features.TreeFeatures;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.Util;
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.InteractionHand;
@@ -138,7 +139,7 @@ public class NeoForgeWorld extends AbstractWorld {
 
     private static final RandomSource random = RandomSource.create();
 
-    private static ResourceLocation getDimensionRegistryKey(ServerLevel world) {
+    private static Identifier getDimensionRegistryKey(ServerLevel world) {
         return Objects.requireNonNull(world.getServer(), "server cannot be null")
             .registryAccess()
             .lookupOrThrow(Registries.DIMENSION_TYPE)
@@ -213,8 +214,8 @@ public class NeoForgeWorld extends AbstractWorld {
         checkNotNull(position);
 
         BlockEntity tile = getWorld().getBlockEntity(NeoForgeAdapter.toBlockPos(position));
-        if (tile instanceof Clearable) {
-            ((Clearable) tile).clearContent();
+        if (tile instanceof Clearable clearable) {
+            clearable.clearContent();
             return true;
         }
         return false;
@@ -244,7 +245,7 @@ public class NeoForgeWorld extends AbstractWorld {
         biomes.getAndSetUnchecked(
             position.x() & 3, position.y() & 3, position.z() & 3,
             getWorld().registryAccess().lookupOrThrow(Registries.BIOME)
-                .getOrThrow(ResourceKey.create(Registries.BIOME, ResourceLocation.parse(biome.id())))
+                .getOrThrow(ResourceKey.create(Registries.BIOME, Identifier.parse(biome.id())))
         );
         chunk.markUnsaved();
         return true;
@@ -345,7 +346,6 @@ public class NeoForgeWorld extends AbstractWorld {
                     originalWorld.dimensionTypeRegistration(),
                     originalWorld.getChunkSource().getGenerator()
                 ),
-                new WorldEditGenListener(),
                 originalWorld.isDebug(),
                 seed,
                 // No spawners are needed for this world.
@@ -357,9 +357,7 @@ public class NeoForgeWorld extends AbstractWorld {
                 regenForWorld(region, extent, serverWorld, options);
 
                 // drive the server executor until all tasks are popped off
-                while (originalWorld.getServer().pollTask()) {
-                    Thread.yield();
-                }
+                originalWorld.getServer().managedBlock(() -> originalWorld.getServer().getPendingTasksCount() == 0);
             } finally {
                 levelProperties.worldOptions = originalOpts;
             }
@@ -451,7 +449,12 @@ public class NeoForgeWorld extends AbstractWorld {
             case CHERRY -> TreeFeatures.CHERRY;
             case PALE_OAK -> TreeFeatures.PALE_OAK;
             case PALE_OAK_CREAKING -> TreeFeatures.PALE_OAK_CREAKING;
-            case RANDOM -> createTreeFeatureGenerator(TreeType.values()[ThreadLocalRandom.current().nextInt(TreeType.values().length)]);
+            case RANDOM -> {
+                // We're intentionally using index here to get a random tree type
+                @SuppressWarnings("EnumOrdinal")
+                TreeType randomTreeType = TreeType.values()[ThreadLocalRandom.current().nextInt(TreeType.values().length)];
+                yield createTreeFeatureGenerator(randomTreeType);
+            }
             default -> null;
         };
     }
@@ -477,7 +480,7 @@ public class NeoForgeWorld extends AbstractWorld {
     @Override
     public boolean generateFeature(ConfiguredFeatureType type, EditSession editSession, BlockVector3 position) {
         ServerLevel world = getWorld();
-        ConfiguredFeature<?, ?> feature = world.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).getValue(ResourceLocation.tryParse(type.id()));
+        ConfiguredFeature<?, ?> feature = world.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).getValue(Identifier.tryParse(type.id()));
         ServerChunkCache chunkManager = world.getChunkSource();
         try (NeoForgeServerLevelDelegateProxy.LevelAndProxy levelProxy =
                  NeoForgeServerLevelDelegateProxy.newInstance(editSession, world)) {
@@ -491,7 +494,7 @@ public class NeoForgeWorld extends AbstractWorld {
     public boolean generateStructure(StructureType type, EditSession editSession, BlockVector3 position) {
         ServerLevel world = getWorld();
         Registry<Structure> structureRegistry = world.registryAccess().lookupOrThrow(Registries.STRUCTURE);
-        Structure structure = structureRegistry.getValue(ResourceLocation.tryParse(type.id()));
+        Structure structure = structureRegistry.getValue(Identifier.tryParse(type.id()));
         if (structure == null) {
             return false;
         }
@@ -557,7 +560,10 @@ public class NeoForgeWorld extends AbstractWorld {
             // We'll be doing a full relight anyways, so we don't need to be LIGHT yet
             world.getChunkSource().getLightEngine().lightChunk(world.getChunk(
                 chunk.x(), chunk.z(), ChunkStatus.INITIALIZE_LIGHT
-            ), false);
+            ), false).exceptionally(t -> {
+                WorldEdit.logger.warn("Failed to relight chunk at " + chunk, t);
+                return null;
+            });
         }
     }
 
@@ -627,7 +633,7 @@ public class NeoForgeWorld extends AbstractWorld {
 
     @Override
     public BlockVector3 getSpawnPosition() {
-        return NeoForgeAdapter.adapt(getWorld().getLevelData().getSpawnPos());
+        return NeoForgeAdapter.adapt(getWorld().getLevelData().getRespawnData().pos());
     }
 
     @Override
@@ -663,17 +669,15 @@ public class NeoForgeWorld extends AbstractWorld {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        } else if ((o instanceof NeoForgeWorld other)) {
-            Level otherWorld = other.worldRef.get();
-            Level thisWorld = worldRef.get();
-            return otherWorld != null && otherWorld.equals(thisWorld);
-        } else if (o instanceof com.sk89q.worldedit.world.World) {
-            return ((com.sk89q.worldedit.world.World) o).getName().equals(getName());
-        } else {
-            return false;
-        }
+        return switch (o) {
+            case NeoForgeWorld other -> {
+                Level otherWorld = other.worldRef.get();
+                Level thisWorld = worldRef.get();
+                yield otherWorld != null && otherWorld.equals(thisWorld);
+            }
+            case com.sk89q.worldedit.world.World world -> world.getName().equals(getName());
+            case null, default -> false;
+        };
     }
 
     @Override
@@ -750,5 +754,10 @@ public class NeoForgeWorld extends AbstractWorld {
                 return NeoForgeAdapter.adapt(getExtent().getBlock(vector)).getBlock() instanceof LiquidBlock;
             }
         };
+    }
+
+    @Override
+    public boolean isValid() {
+        return worldRef.get() != null;
     }
 }

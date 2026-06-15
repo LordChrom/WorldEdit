@@ -21,6 +21,7 @@ package com.sk89q.worldedit.bukkit;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.Keep;
 import com.sk89q.bukkit.util.ClassSourceValidator;
 import com.sk89q.util.yaml.YAMLProcessor;
 import com.sk89q.wepif.PermissionsResolverManager;
@@ -48,7 +49,6 @@ import com.sk89q.worldedit.registry.state.Property;
 import com.sk89q.worldedit.util.lifecycle.Lifecycled;
 import com.sk89q.worldedit.util.lifecycle.SimpleLifecycled;
 import com.sk89q.worldedit.world.World;
-import com.sk89q.worldedit.world.biome.BiomeType;
 import com.sk89q.worldedit.world.block.BlockCategory;
 import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldedit.world.block.BlockType;
@@ -98,19 +98,6 @@ import static com.sk89q.worldedit.internal.anvil.ChunkDeleter.DELCHUNKS_FILE_NAM
  * Plugin for Bukkit.
  */
 public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
-
-    // This must be before the Logger is initialized, which fails in 1.8
-    private static final String FAILED_VERSION_CHECK =
-        "\n**********************************************\n"
-            + "** This Minecraft version (%s) is not supported by this version of WorldEdit.\n"
-            + "** Please download an OLDER version of WorldEdit which does.\n"
-            + "**********************************************\n";
-
-    static {
-        if (PaperLib.getMinecraftVersion() < 13) {
-            throw new IllegalStateException(String.format(FAILED_VERSION_CHECK, Bukkit.getVersion()));
-        }
-    }
 
     private static final Logger LOGGER = LogManagerCompat.getLogger();
     public static final String CUI_PLUGIN_CHANNEL = "worldedit:cui";
@@ -182,6 +169,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
                 // since worlds are loaded already, we can do this now
                 setupWorldData();
             } catch (Throwable ignored) {
+                // If we bork during reload, oh well
             }
         }
 
@@ -205,16 +193,8 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         WorldEdit.getInstance().getEventBus().post(new PlatformReadyEvent(platform));
     }
 
-    @SuppressWarnings({ "unchecked", "deprecation", "removal" })
+    @SuppressWarnings({ "unchecked" })
     private void initializeRegistries() {
-        // Biome
-        Registry.BIOME.forEach(biome -> {
-            // TODO Fix this check for 1.22 / when we drop < 1.21 support
-            if (!biome.name().equals("CUSTOM")) {
-                String key = biome.getKey().toString();
-                BiomeType.REGISTRY.register(key, new BiomeType(key));
-            }
-        });
         // Block & Item
         Registry.MATERIAL.forEach(material -> {
             String key = material.getKey().toString();
@@ -229,7 +209,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
                         FuzzyBlockState state = (FuzzyBlockState) WorldEdit.getInstance().getBlockFactory().parseFromInput(
                                 BukkitAdapter.adapt(blockState.getBlockType()).createBlockData().getAsString(), context
                         ).toImmutableState();
-                        BlockState defaultState = blockState.getBlockType().getAllStates().get(0);
+                        BlockState defaultState = blockState.getBlockType().getAllStates().getFirst();
                         for (Map.Entry<Property<?>, Object> propertyObjectEntry : state.getStates().entrySet()) {
                             //noinspection unchecked
                             defaultState = defaultState.with((Property<Object>) propertyObjectEntry.getKey(), propertyObjectEntry.getValue());
@@ -478,10 +458,10 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
     }
 
     public Actor wrapCommandSender(CommandSender sender) {
-        if (sender instanceof Player) {
-            return wrapPlayer((Player) sender);
-        } else if (config.commandBlockSupport && sender instanceof BlockCommandSender) {
-            return new BukkitBlockCommandSender(this, (BlockCommandSender) sender);
+        if (sender instanceof Player player) {
+            return wrapPlayer(player);
+        } else if (config.commandBlockSupport && sender instanceof BlockCommandSender blockCommandSender) {
+            return new BukkitBlockCommandSender(this, blockCommandSender);
         }
 
         return new BukkitCommandSender(this, sender);
@@ -526,6 +506,8 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
     private class WorldInitListener implements Listener {
         private boolean loaded = false;
 
+        @Keep
+        @SuppressWarnings("UnusedVariable")
         @EventHandler(priority = EventPriority.LOWEST)
         public void onWorldInit(WorldInitEvent event) {
             if (loaded) {
@@ -540,6 +522,7 @@ public class WorldEditPlugin extends JavaPlugin implements TabCompleter {
         AsyncTabCompleteListener() {
         }
 
+        @Keep
         @SuppressWarnings("UnnecessaryFullyQualifiedName")
         @EventHandler(ignoreCancelled = true)
         public void onAsyncTabComplete(com.destroystokyo.paper.event.server.AsyncTabCompleteEvent event) {

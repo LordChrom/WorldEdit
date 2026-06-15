@@ -1,4 +1,3 @@
-import org.cadixdev.gradle.licenser.LicenseExtension
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 plugins {
@@ -19,6 +18,13 @@ dependencies {
     }
 
     "api"(project(":worldedit-libs:core"))
+
+    "api"(platform(libs.linBus.bom))
+    "api"(libs.linBus.common)
+    "api"(libs.linBus.stream)
+    "api"(libs.linBus.tree)
+    "api"(libs.linBus.format.snbt)
+
     "compileOnly"(libs.trueZip)
     "implementation"(libs.rhino)
     "implementation"(libs.snakeyaml)
@@ -80,17 +86,14 @@ tasks.generateGrammarSource {
     )
 }
 
-tasks.named("sourcesJar") {
-    mustRunAfter("generateGrammarSource")
+tasks.withType<Checkstyle>().configureEach {
+    exclude("com/sk89q/worldedit/antlr/")
 }
 
-configure<LicenseExtension> {
-    exclude {
-        it.file.startsWith(project.layout.buildDirectory.get().asFile)
+levelHeadered {
+    sourceMatchPatterns {
+        exclude("com/sk89q/worldedit/antlr/")
     }
-}
-tasks.withType<Checkstyle>().configureEach {
-    exclude("com/sk89q/worldedit/antlr/**/*.java")
 }
 
 // Give intellij info about where ANTLR code comes from
@@ -117,6 +120,17 @@ tasks.named<Copy>("processResources") {
         }
         into("lang")
     }
+}
+
+// "Publish" a resources variant for other projects to consume
+configurations.consumable("resourcesVariant") {
+    // Similar to mainSourceElements
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category::class, Category.VERIFICATION))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling::class, Bundling.EXTERNAL))
+        attribute(VerificationType.VERIFICATION_TYPE_ATTRIBUTE, objects.named(VerificationType::class, "resources"))
+    }
+    outgoing.artifact(tasks.named("processResources"))
 }
 
 configure<PublishingExtension> {
