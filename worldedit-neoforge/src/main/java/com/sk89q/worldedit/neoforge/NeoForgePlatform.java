@@ -38,7 +38,7 @@ import com.sk89q.worldedit.world.registry.Registries;
 import net.minecraft.SharedConstants;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.level.ServerLevel;
@@ -98,7 +98,7 @@ class NeoForgePlatform extends AbstractPlatform implements MultiUserPlatform {
 
     @Override
     public boolean isValidMobType(String type) {
-        return BuiltInRegistries.ENTITY_TYPE.containsKey(ResourceLocation.parse(type));
+        return BuiltInRegistries.ENTITY_TYPE.containsKey(Identifier.parse(type));
     }
 
     @Override
@@ -117,8 +117,8 @@ class NeoForgePlatform extends AbstractPlatform implements MultiUserPlatform {
     public NeoForgeWatchdog getWatchdog() {
         if (watchdog == null) {
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-            if (server instanceof DedicatedServer) {
-                watchdog = new NeoForgeWatchdog((DedicatedServer) server);
+            if (server instanceof DedicatedServer dedicatedServer) {
+                watchdog = new NeoForgeWatchdog(dedicatedServer);
             }
         }
         return watchdog;

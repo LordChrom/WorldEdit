@@ -20,6 +20,7 @@
 package com.sk89q.worldedit;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.InlineMe;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.event.extent.EditSessionEvent;
@@ -127,12 +128,12 @@ import com.sk89q.worldedit.world.block.BlockTypes;
 import com.sk89q.worldedit.world.registry.LegacyMapper;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -141,6 +142,8 @@ import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.sk89q.worldedit.internal.util.SwitchEnhancements.dummyValue;
+import static com.sk89q.worldedit.internal.util.SwitchEnhancements.exhaustive;
 import static com.sk89q.worldedit.regions.Regions.asFlatRegion;
 import static com.sk89q.worldedit.regions.Regions.maximumBlockY;
 import static com.sk89q.worldedit.regions.Regions.minimumBlockY;
@@ -232,6 +235,8 @@ public class EditSession implements Extent, AutoCloseable {
      * @param actor the actor that owns the session
      * @param tracing if tracing is enabled. An actor is required if this is {@code true}
      */
+    // Suppressing AssignmentExpression: This provides clarity in the way that we use it.
+    @SuppressWarnings("AssignmentExpression")
     EditSession(EventBus eventBus, World world, int maxBlocks, @Nullable BlockBag blockBag,
                 @Nullable Actor actor,
                 boolean tracing) {
@@ -1287,8 +1292,12 @@ public class EditSession implements Extent, AutoCloseable {
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      * @deprecated Use {@link EditSession#makeCuboidFaces(Region, Pattern)}.
      */
+    @InlineMe(
+        replacement = "this.makeCuboidFaces(region, (Pattern) block)",
+        imports = "com.sk89q.worldedit.function.pattern.Pattern"
+    )
     @Deprecated
-    public <B extends BlockStateHolder<B>> int makeCuboidFaces(Region region, B block) throws MaxChangedBlocksException {
+    public final <B extends BlockStateHolder<B>> int makeCuboidFaces(Region region, B block) throws MaxChangedBlocksException {
         return makeCuboidFaces(region, (Pattern) block);
     }
 
@@ -2042,8 +2051,12 @@ public class EditSession implements Extent, AutoCloseable {
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      * @deprecated Use {@link #thaw(BlockVector3, double, int)}.
      */
+    @InlineMe(
+        replacement = "this.thaw(position, radius, WorldEdit.getInstance().getConfiguration().defaultVerticalHeight)",
+        imports = "com.sk89q.worldedit.WorldEdit"
+    )
     @Deprecated
-    public int thaw(BlockVector3 position, double radius)
+    public final int thaw(BlockVector3 position, double radius)
         throws MaxChangedBlocksException {
         return thaw(position, radius,
             WorldEdit.getInstance().getConfiguration().defaultVerticalHeight);
@@ -2077,7 +2090,7 @@ public class EditSession implements Extent, AutoCloseable {
         int ceilRadius = (int) Math.ceil(radius);
         for (int x = ox - ceilRadius; x <= ox + ceilRadius; ++x) {
             for (int z = oz - ceilRadius; z <= oz + ceilRadius; ++z) {
-                if ((BlockVector3.at(x, oy, z)).distanceSq(position) > radiusSq) {
+                if (BlockVector3.at(x, oy, z).distanceSq(position) > radiusSq) {
                     continue;
                 }
 
@@ -2114,8 +2127,12 @@ public class EditSession implements Extent, AutoCloseable {
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      * @deprecated Use {@link #simulateSnow(BlockVector3, double, int)}.
      */
+    @InlineMe(
+        replacement = "this.simulateSnow(position, radius, WorldEdit.getInstance().getConfiguration().defaultVerticalHeight)",
+        imports = "com.sk89q.worldedit.WorldEdit"
+    )
     @Deprecated
-    public int simulateSnow(BlockVector3 position, double radius) throws MaxChangedBlocksException {
+    public final int simulateSnow(BlockVector3 position, double radius) throws MaxChangedBlocksException {
         return simulateSnow(position, radius,
             WorldEdit.getInstance().getConfiguration().defaultVerticalHeight);
     }
@@ -2164,8 +2181,12 @@ public class EditSession implements Extent, AutoCloseable {
      * @throws MaxChangedBlocksException thrown if too many blocks are changed
      * @deprecated Use {@link #green(BlockVector3, double, int, boolean)}.
      */
+    @InlineMe(
+        replacement = "this.green(position, radius, WorldEdit.getInstance().getConfiguration().defaultVerticalHeight, onlyNormalDirt)",
+        imports = "com.sk89q.worldedit.WorldEdit"
+    )
     @Deprecated
-    public int green(BlockVector3 position, double radius, boolean onlyNormalDirt)
+    public final int green(BlockVector3 position, double radius, boolean onlyNormalDirt)
         throws MaxChangedBlocksException {
         return green(position, radius,
             WorldEdit.getInstance().getConfiguration().defaultVerticalHeight, onlyNormalDirt);
@@ -2199,7 +2220,7 @@ public class EditSession implements Extent, AutoCloseable {
         final int ceilRadius = (int) Math.ceil(radius);
         for (int x = ox - ceilRadius; x <= ox + ceilRadius; ++x) {
             for (int z = oz - ceilRadius; z <= oz + ceilRadius; ++z) {
-                if ((BlockVector3.at(x, oy, z)).distanceSq(position) > radiusSq) {
+                if (BlockVector3.at(x, oy, z).distanceSq(position) > radiusSq) {
                     continue;
                 }
 
@@ -2349,17 +2370,12 @@ public class EditSession implements Extent, AutoCloseable {
                          final Pattern pattern, final Expression expression, final boolean hollow, final int timeout)
             throws ExpressionException, MaxChangedBlocksException {
 
-        expression.getSlots().getVariable("x")
-            .orElseThrow(IllegalStateException::new);
-        expression.getSlots().getVariable("y")
-            .orElseThrow(IllegalStateException::new);
-        expression.getSlots().getVariable("z")
-            .orElseThrow(IllegalStateException::new);
+        getRequiredVariable("x", expression);
+        getRequiredVariable("y", expression);
+        getRequiredVariable("z", expression);
 
-        final Variable typeVariable = expression.getSlots().getVariable("type")
-            .orElseThrow(IllegalStateException::new);
-        final Variable dataVariable = expression.getSlots().getVariable("data")
-            .orElseThrow(IllegalStateException::new);
+        final Variable typeVariable = getRequiredVariable("type", expression);
+        final Variable dataVariable = getRequiredVariable("data", expression);
 
         final WorldEditExpressionEnvironment environment = new WorldEditExpressionEnvironment(this, unit, zero);
         expression.setEnvironment(environment);
@@ -2410,6 +2426,11 @@ public class EditSession implements Extent, AutoCloseable {
                             changed, timedOut[0]));
         }
         return changed;
+    }
+
+    private Variable getRequiredVariable(String name, Expression expression) {
+        return expression.getSlots().getVariable(name)
+            .orElseThrow(() -> new IllegalStateException("Expression is missing required variable: " + name));
     }
 
     /**
@@ -2770,7 +2791,7 @@ public class EditSession implements Extent, AutoCloseable {
     }
 
     private void recurseHollow(Region region, BlockVector3 origin, Set<BlockVector3> outside) {
-        final LinkedList<BlockVector3> queue = new LinkedList<>();
+        var queue = new ArrayDeque<BlockVector3>();
         queue.addLast(origin);
 
         while (!queue.isEmpty()) {

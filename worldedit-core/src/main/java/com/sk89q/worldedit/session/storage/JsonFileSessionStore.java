@@ -19,6 +19,7 @@
 
 package com.sk89q.worldedit.session.storage;
 
+import com.google.errorprone.annotations.InlineMe;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -56,6 +57,7 @@ public class JsonFileSessionStore implements SessionStore {
      * @param dir the directory
      * @deprecated Use {@link #JsonFileSessionStore(Path)}
      */
+    @InlineMe(replacement = "this(dir.toPath())")
     @Deprecated
     public JsonFileSessionStore(File dir) {
         this(dir.toPath());

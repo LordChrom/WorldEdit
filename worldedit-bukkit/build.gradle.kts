@@ -12,27 +12,38 @@ platform {
     includeClasspath = true
 }
 
-val localImplementation = configurations.create("localImplementation") {
+val localImplementation = configurations.dependencyScope("localImplementation") {
     description = "Dependencies used locally, but provided by the runtime Bukkit implementation"
-    isCanBeConsumed = false
-    isCanBeResolved = false
 }
-configurations["compileOnly"].extendsFrom(localImplementation)
-configurations["testImplementation"].extendsFrom(localImplementation)
+configurations.named("compileOnly") {
+    extendsFrom(localImplementation.get())
+}
+configurations.named("testImplementation") {
+    extendsFrom(localImplementation.get())
+}
 
-val adapters = configurations.create("adapters") {
+val adaptersScope = configurations.dependencyScope("adaptersScope") {
     description = "Adapters to include in the JAR"
-    isCanBeConsumed = false
-    isCanBeResolved = true
+}
+val adaptersReobfScope = configurations.dependencyScope("adaptersReobfScope") {
+    description = "Reobfuscated adapters to include in the JAR"
+}
+
+val adapters = configurations.resolvable("adapters") {
+    extendsFrom(adaptersScope.get())
+    description = "Adapters to include in the JAR (resolvable)"
     shouldResolveConsistentlyWith(configurations["runtimeClasspath"])
     attributes {
-        attribute(Obfuscation.OBFUSCATION_ATTRIBUTE,
-            if ((project.findProperty("enginehub.obf.none") as String?).toBoolean()) {
-                objects.named(Obfuscation.NONE)
-            } else {
-                objects.named(Obfuscation.OBFUSCATED)
-            }
-        )
+        attribute(Obfuscation.OBFUSCATION_ATTRIBUTE, objects.named(Obfuscation.NONE))
+    }
+}
+
+val adaptersReobf = configurations.resolvable("adaptersReobf") {
+    extendsFrom(adaptersReobfScope.get())
+    description = "Reobfuscated adapters to include in the JAR (resolvable)"
+    shouldResolveConsistentlyWith(configurations["runtimeClasspath"])
+    attributes {
+        attribute(Obfuscation.OBFUSCATION_ATTRIBUTE, objects.named(Obfuscation.OBFUSCATED))
     }
 }
 
@@ -60,7 +71,10 @@ dependencies {
     "implementation"(libs.fastutil)
 
     project.project(":worldedit-bukkit:adapters").subprojects.forEach {
-        "adapters"(project(it.path))
+        "adaptersScope"(project(it.path))
+    }
+    listOf("1.21.4", "1.21.5", "1.21.6", "1.21.9", "1.21.11").forEach {
+        "adaptersReobfScope"(project(":worldedit-bukkit:adapters:adapter-$it"))
     }
 }
 
@@ -73,8 +87,16 @@ tasks.named<Copy>("processResources") {
     }
 }
 
+tasks.register<ShadowJar>("shadeReobfAdapters") {
+    archiveClassifier.set("reobf-adapters")
+    configurations.add(adaptersReobf.get())
+
+    relocate("com.sk89q.worldedit.bukkit.adapter.impl", "com.sk89q.worldedit.bukkit.adapter.impl.reobf")
+}
+
 tasks.named<ShadowJar>("shadowJar") {
-    configurations.add(adapters)
+    from(tasks.named("shadeReobfAdapters"))
+    configurations.add(adapters.get())
     dependencies {
         // In tandem with not bundling log4j, we shouldn't relocate base package here.
         // relocate("org.apache.logging", "com.sk89q.worldedit.log4j")
@@ -102,6 +124,9 @@ tasks.named<ShadowJar>("shadowJar") {
         minimize {
             exclude(dependency("${it.group}:${it.name}"))
         }
+    }
+    manifest {
+        attributes["paperweight-mappings-namespace"] = "mojang"
     }
 }
 

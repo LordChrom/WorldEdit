@@ -19,10 +19,11 @@
 
 package com.sk89q.worldedit.fabric.mixin;
 
+import com.google.errorprone.annotations.Keep;
 import com.sk89q.worldedit.extension.platform.Watchdog;
 import com.sk89q.worldedit.fabric.internal.ExtendedMinecraftServer;
-import net.minecraft.Util;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.Util;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.spongepowered.asm.mixin.Final;
@@ -35,6 +36,7 @@ import java.nio.file.Path;
 @Mixin(MinecraftServer.class)
 public abstract class MixinMinecraftServer implements Watchdog, ExtendedMinecraftServer {
 
+    @Keep
     @Shadow
     private long nextTickTimeNanos;
     @Final

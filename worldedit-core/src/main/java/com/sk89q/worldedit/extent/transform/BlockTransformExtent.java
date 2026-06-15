@@ -213,24 +213,25 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
                         }
                     }
 
-                    // rails
-                    if (affineTransform.isVerticalFlip()) {
-                        String value = (String) result.getState(property);
-                        String newValue = switch (value) {
-                            case "ascending_east" -> "ascending_west";
-                            case "ascending_west" -> "ascending_east";
-                            case "ascending_north" -> "ascending_south";
-                            case "ascending_south" -> "ascending_north";
-                            default -> null;
-                        };
-                        if (newValue != null && enumProp.getValues().contains(newValue)) {
-                            result = result.with(enumProp, newValue);
-                        }
-                    }
 
                     if (isRailShape(enumProp)) {
+                        // rails
+                        if (affineTransform.isVerticalFlip()) {
+                            String value = (String) result.getState(property);
+                            String newValue = switch (value) {
+                                case "ascending_east" -> "ascending_west";
+                                case "ascending_west" -> "ascending_east";
+                                case "ascending_north" -> "ascending_south";
+                                case "ascending_south" -> "ascending_north";
+                                default -> null;
+                            };
+                            if (newValue != null && enumProp.getValues().contains(newValue)) {
+                                result = result.with(enumProp, newValue);
+                            }
+                        }
+
                         String value = (String) result.getState(property);
-                        String[] parts = value.split("_");
+                        String[] parts = value.split("_", 2);
                         String newStartString = parts[0];
                         if (!newStartString.equals("ascending")) {
                             Direction start = Direction.valueOf(parts[0].toUpperCase(Locale.ROOT));
@@ -252,11 +253,11 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
                             result = result.with(enumProp, newShapeSwapped);
                         }
                     }
-                } else if (property.getName().equals("orientation") && transform instanceof AffineTransform affineTransform) {
+                } else if (property.getName().equals("orientation") && transform instanceof AffineTransform) {
                     // crafters
                     String current = (String) result.getState(property);
 
-                    String[] parts = current.split("_");
+                    String[] parts = current.split("_", 2);
                     Direction facing = Direction.valueOf(parts[0].toUpperCase(Locale.ROOT));
                     Direction top = Direction.valueOf(parts[1].toUpperCase(Locale.ROOT));
 
@@ -300,16 +301,16 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
         for (Property<?> prop : properties) {
             if (directionNames.contains(prop.getName())) {
                 var state = result.getState(prop);
-                if (prop instanceof BooleanProperty && (Boolean) state
-                        || prop instanceof EnumProperty && !state.toString().equals("none")) {
+                if ((prop instanceof BooleanProperty && (Boolean) state)
+                        || (prop instanceof EnumProperty && !state.toString().equals("none"))) {
                     String origProp = prop.getName().toUpperCase(Locale.ROOT);
                     Direction dir = Direction.valueOf(origProp);
                     Direction closest = Direction.findClosest(transform.apply(dir.toVector()), Direction.Flag.CARDINAL);
                     if (closest != null) {
                         String closestProp = closest.name().toLowerCase(Locale.ROOT);
-                        if (prop instanceof BooleanProperty) {
-                            result = result.with((BooleanProperty) prop, Boolean.FALSE);
-                            directionalProperties.put(closestProp, Boolean.TRUE);
+                        if (prop instanceof BooleanProperty boolProp) {
+                            result = result.with(boolProp, false);
+                            directionalProperties.put(closestProp, true);
                         } else {
                             if (prop.getValues().contains("none")) {
                                 @SuppressWarnings("unchecked")
@@ -366,13 +367,14 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
 
     private static boolean isRailShape(EnumProperty property) {
         List<String> propertyValues = property.getValues();
-        List<Object> railShapeValues = BlockTypes.RAIL.getProperty("shape").getValues();
-        if (railShapeValues.size() != propertyValues.size()) {
+        List<Object> straightRailShapeValues = BlockTypes.DETECTOR_RAIL.getProperty("shape").getValues();
+
+        if (propertyValues.size() < straightRailShapeValues.size()) {
             return false;
         }
 
-        for (String propertyValue : propertyValues) {
-            if (!railShapeValues.contains(propertyValue)) {
+        for (Object propertyValue : straightRailShapeValues) {
+            if (!propertyValues.contains(propertyValue)) {
                 return false;
             }
         }

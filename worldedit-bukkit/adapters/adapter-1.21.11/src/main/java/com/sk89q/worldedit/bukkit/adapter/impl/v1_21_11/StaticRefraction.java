@@ -17,7 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.sk89q.worldedit.bukkit.adapter.impl.v1_21_3;
+package com.sk89q.worldedit.bukkit.adapter.impl.v1_21_11;
 
 import com.sk89q.worldedit.bukkit.adapter.Refraction;
 
@@ -35,7 +35,7 @@ public final class StaticRefraction {
     public static final String MAIN_THREAD_PROCESSOR = Refraction.pickName(
         "mainThreadProcessor", "g"
     );
-    public static final String NEXT_TICK_TIME = Refraction.pickName("nextTickTime", "e");
+    public static final String NEXT_TICK_TIME = Refraction.pickName("nextTickTimeNanos", "am");
     public static final String GET_BLOCK_STATE = Refraction.pickName("getBlockState", "a_");
     public static final String IS_STATE_AT_POSITION = Refraction.pickName("isStateAtPosition", "a");
     /**

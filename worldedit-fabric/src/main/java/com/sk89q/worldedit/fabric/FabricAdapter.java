@@ -46,7 +46,7 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.StringRepresentable;
@@ -85,8 +85,8 @@ public final class FabricAdapter {
      */
     public static net.minecraft.world.level.Level adapt(World world) {
         checkNotNull(world);
-        if (world instanceof FabricWorld) {
-            return ((FabricWorld) world).getWorld();
+        if (world instanceof FabricWorld fabricWorld) {
+            return fabricWorld.getWorld();
         } else {
             // TODO introduce a better cross-platform world API to match more easily
             throw new UnsupportedOperationException("Cannot adapt from a " + world.getClass());
@@ -95,11 +95,11 @@ public final class FabricAdapter {
 
     public static Biome adapt(BiomeType biomeType) {
         return FabricWorldEdit.getRegistry(Registries.BIOME)
-            .getValue(ResourceLocation.parse(biomeType.id()));
+            .getValue(Identifier.parse(biomeType.id()));
     }
 
     public static BiomeType adapt(Biome biome) {
-        ResourceLocation id = FabricWorldEdit.getRegistry(Registries.BIOME).getKey(biome);
+        Identifier id = FabricWorldEdit.getRegistry(Registries.BIOME).getKey(biome);
         Objects.requireNonNull(id, "biome is not registered");
         return BiomeTypes.get(id.toString());
     }
@@ -150,6 +150,8 @@ public final class FabricAdapter {
      *
      * @deprecated without replacement, use the block adapter methods
      */
+    // Suppress InlineMeSuggester: There is no replacement, so this shouldn't be inlined
+    @SuppressWarnings("InlineMeSuggester")
     @Deprecated
     public static Property<?> adaptProperty(net.minecraft.world.level.block.state.properties.Property<?> property) {
         return FabricTransmogrifier.transmogToWorldEditProperty(property);
@@ -217,7 +219,7 @@ public final class FabricAdapter {
     }
 
     public static Block adapt(BlockType blockType) {
-        return FabricWorldEdit.getRegistry(Registries.BLOCK).getValue(ResourceLocation.parse(blockType.id()));
+        return FabricWorldEdit.getRegistry(Registries.BLOCK).getValue(Identifier.parse(blockType.id()));
     }
 
     public static BlockType adapt(Block block) {
@@ -225,7 +227,7 @@ public final class FabricAdapter {
     }
 
     public static Item adapt(ItemType itemType) {
-        return FabricWorldEdit.getRegistry(Registries.ITEM).getValue(ResourceLocation.parse(itemType.id()));
+        return FabricWorldEdit.getRegistry(Registries.ITEM).getValue(Identifier.parse(itemType.id()));
     }
 
     public static ItemType adapt(Item item) {
@@ -285,7 +287,7 @@ public final class FabricAdapter {
             return adaptPlayer(commandSourceStack.getPlayer());
         }
         if (FabricWorldEdit.inst.getConfig().commandBlockSupport && commandSourceStack.source instanceof BaseCommandBlock commandBlock) {
-            return new FabricBlockCommandSender(commandBlock);
+            return new FabricBlockCommandSender(commandBlock, commandSourceStack.getLevel(), commandSourceStack.getPosition());
         }
 
         return new FabricCommandSender(commandSourceStack);
